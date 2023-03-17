@@ -4,12 +4,6 @@ use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub trait HasherFactory {
-    type Type;
-    fn name() -> &'static str;
-    fn new() -> Self::Type;
-}
-
 pub trait Hasher: Send + Sync {
     fn hash(&self, data: &[u8]) -> Vec<u8>;
 }
@@ -18,13 +12,13 @@ pub type HasherFactoryMap = HashMap<&'static str, Box<dyn Fn() -> Arc<dyn Hasher
 
 pub fn list_available() -> HasherFactoryMap {
     let mut result: HasherFactoryMap = HashMap::new();
-    macro_rules! add {
-        ($F:ty) => {
-            result.insert(<$F>::name(), Box::new(|| Arc::new(<$F>::new())));
+    macro_rules! lazy {
+        ($f:expr) => {
+            Box::new(|| Arc::new($f))
         };
     }
 
-    add!(blake3::Blake3Hasher);
+    result.insert("Blake3", lazy!(blake3::Blake3Hasher::new()));
 
     return result;
 }

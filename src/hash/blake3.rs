@@ -2,14 +2,8 @@ use super::*;
 
 pub struct Blake3Hasher {}
 
-impl HasherFactory for Blake3Hasher {
-    type Type = Blake3Hasher;
-
-    fn name() -> &'static str {
-        "Blake3"
-    }
-
-    fn new() -> Self::Type {
+impl Blake3Hasher {
+    pub fn new() -> Self {
         Blake3Hasher {}
     }
 }

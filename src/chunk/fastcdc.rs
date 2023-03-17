@@ -8,14 +8,8 @@ pub struct FastCDC2020Mmap {
     block_max: u32,
 }
 
-impl ChunkerFactory for FastCDC2020Mmap {
-    type Type = FastCDC2020Mmap;
-
-    fn name() -> &'static str {
-        "FastCDC v2020 (mmap)"
-    }
-
-    fn new(block_size: u32) -> Self::Type {
+impl FastCDC2020Mmap {
+    pub fn new(block_size: u32) -> Self {
         FastCDC2020Mmap {
             block_min: (block_size * 9 / 10) as u32,
             block_avg: block_size as u32,
@@ -25,6 +19,10 @@ impl ChunkerFactory for FastCDC2020Mmap {
 }
 
 impl Chunker for FastCDC2020Mmap {
+    fn get_block_size(&self) -> u32 {
+        self.block_avg
+    }
+
     fn get_max_block_size(&self) -> u32 {
         self.block_max
     }
@@ -32,7 +30,7 @@ impl Chunker for FastCDC2020Mmap {
     fn split(&self, file: fs::File, cb: &mut dyn FnMut(Vec<u8>)) -> Result<()> {
         let mmap = unsafe { memmap2::Mmap::map(&file).context("failed to mmap")? };
 
-        let chunker = fastcdc::v2020::FastCDC::new(
+        let chunker = ::fastcdc::v2020::FastCDC::new(
             &mmap[..], //
             self.block_min,
             self.block_avg,

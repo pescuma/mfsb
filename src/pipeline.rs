@@ -12,8 +12,8 @@ impl Config {
     pub fn new() -> Config {
         Config {
             hasher: hash::new("Blake3").unwrap(),
-            // chunk: Box::new(chunk::rabin_mmap::RabinMmap::new(1 * 1024 * 1024)),
-            // chunk: Box::new(chunk::hash_roll_mmap::FastCDC::new(1 * 1024 * 1024)),
+            // chunk: Box::newChaCha20Poly1305(chunk::rabin_mmap::RabinMmap::newChaCha20Poly1305(1 * 1024 * 1024)),
+            // chunk: Box::newChaCha20Poly1305(chunk::hash_roll_mmap::FastCDC::newChaCha20Poly1305(1 * 1024 * 1024)),
             chunker: chunk::new("Rabin64 (mmap)", 1 * 1024 * 1024).unwrap(),
             compressor: compress::new("Snappy").unwrap(),
             encryptor: encrypt::new("ChaCha20Poly1305", "1234").unwrap(),

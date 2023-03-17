@@ -2,14 +2,8 @@ use super::*;
 
 pub struct SnappyCompressor {}
 
-impl CompressorFactory for SnappyCompressor {
-    type Type = SnappyCompressor;
-
-    fn name() -> &'static str {
-        "Snappy"
-    }
-
-    fn new() -> Self::Type {
+impl SnappyCompressor {
+    pub fn new() -> Self {
         SnappyCompressor {}
     }
 }

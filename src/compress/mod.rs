@@ -1,15 +1,11 @@
 mod snappy;
 mod zstd;
 
+use crate::compress::snappy::SnappyCompressor;
+use crate::compress::zstd::ZstdCompressor;
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
-
-pub trait CompressorFactory {
-    type Type;
-    fn name() -> &'static str;
-    fn new() -> Self::Type;
-}
 
 pub trait Compressor: Send + Sync {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>>;
@@ -19,23 +15,16 @@ pub type CompressorFactoryMap = HashMap<&'static str, Box<dyn Fn() -> Arc<dyn Co
 
 pub fn list_available() -> CompressorFactoryMap {
     let mut result: CompressorFactoryMap = HashMap::new();
-    macro_rules! add {
-        ($F:ty) => {
-            result.insert(<$F>::name(), Box::new(|| Arc::new(<$F>::new())));
+    macro_rules! lazy {
+        ($f:expr) => {
+            Box::new(|| Arc::new($f))
         };
     }
 
-    add!(snappy::SnappyCompressor);
-    add!(zstd::ZstdCompressor);
-    add!(zstd::Zstd1Compressor);
-    add!(zstd::Zstd2Compressor);
-    add!(zstd::Zstd3Compressor);
-    add!(zstd::Zstd4Compressor);
-    add!(zstd::Zstd5Compressor);
-    add!(zstd::Zstd6Compressor);
-    add!(zstd::Zstd7Compressor);
-    add!(zstd::Zstd8Compressor);
-    add!(zstd::Zstd9Compressor);
+    result.insert("Snappy", lazy!(SnappyCompressor::new()));
+    result.insert("zstd-fastest", lazy!(ZstdCompressor::new(1)));
+    result.insert("zstd-default", lazy!(ZstdCompressor::new(3)));
+    result.insert("zstd-better-compression", lazy!(ZstdCompressor::new(8)));
 
     return result;
 }
