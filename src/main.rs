@@ -188,6 +188,7 @@ fn create_threads(
                                 compressor.as_ref(),
                                 encryptor.as_ref(),
                             );
+
                             store_pack_tx.send(pack).unwrap();
                             pack = PackBuilder::new(pack_capacity);
                         }
@@ -201,6 +202,7 @@ fn create_threads(
                             compressor.as_ref(),
                             encryptor.as_ref(),
                         );
+
                         store_pack_tx.send(pack).unwrap();
                     }
                 }
