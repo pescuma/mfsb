@@ -21,63 +21,115 @@ use crate::compress::lz4::LZ4Compressor;
 use crate::compress::lzma::LzmaCompressor;
 use crate::compress::zlib::ZlibCompressor;
 
-pub trait Compressor: Send + Sync {
+pub struct Compressor {
+    name: &'static str,
+    ct: CompressionType,
+    inner: Box<dyn CompressorImpl>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum CompressionType {
+    SNAPPY,
+    ZSTD,
+    DEFLATE,
+    ZLIB,
+    GZIP,
+    BZIP2,
+    LZMA,
+    BROTLI,
+    LZ4,
+}
+
+/// Trait that must be implemented by new compressors
+trait CompressorImpl: Send + Sync {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>>;
 }
 
-pub type CompressorFactoryMap = HashMap<&'static str, Box<dyn Fn() -> Arc<dyn Compressor>>>;
+impl Compressor {
+    pub fn list_available_names() -> Vec<&'static str> {
+        return REGISTERED.0.keys().map(|k| *k).collect();
+    }
 
-pub fn list_available() -> CompressorFactoryMap {
-    let mut result: CompressorFactoryMap = HashMap::new();
-    macro_rules! lazy {
-        ($f:expr) => {
-            Box::new(|| Arc::new($f))
+    pub fn build_by_name(name: &str) -> Result<Arc<Compressor>> {
+        let compressor = REGISTERED.0
+            .get(name)
+            .with_context(|| format!("unknown compressor: '{}'", name))?;
+
+        Ok(compressor.clone())
+    }
+
+    pub fn build_by_type(ct: CompressionType) -> Result<Arc<Compressor>> {
+        let compressor = REGISTERED.1
+            .get(&ct)
+            .with_context(|| format!("unknown compressor: {:?}", ct))?;
+
+        Ok(compressor.clone())
+    }
+
+    fn new(name: &'static str, ct: CompressionType, inner: Box<dyn CompressorImpl>) -> Self {
+        Self { name, ct, inner }
+    }
+
+    pub fn get_name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn get_type(&self) -> CompressionType {
+        self.ct
+    }
+
+    pub fn compress(&self, data: Vec<u8>) -> Result<(Option<CompressionType>, Vec<u8>)> {
+        let result = self.inner.compress(&data)?;
+
+        if result.len() < data.len() {
+            Ok((Some(self.ct), result))
+        } else {
+            Ok((None, data))
+        }
+    }
+}
+
+lazy_static! {
+    static ref REGISTERED: (HashMap<&'static str, Arc<Compressor>>, HashMap<CompressionType, Arc<Compressor>>) = create_compressors();
+}
+
+fn create_compressors() -> (HashMap<&'static str, Arc<Compressor>>, HashMap<CompressionType, Arc<Compressor>>) {
+    let mut by_name = HashMap::new();
+    let mut by_type = HashMap::new();
+
+    macro_rules! register {
+        ($n:expr, $t:expr,  $f:expr) => {
+            let c = Arc::new(Compressor::new($n, $t, Box::new($f)));
+            by_name.insert($n, c.clone());
+            if !by_type.contains_key(&$t) {
+                by_type.insert($t, c);
+            }
         };
     }
 
-    result.insert("Snappy", lazy!(SnappyCompressor::new()));
-    result.insert("zstd-fastest", lazy!(ZstdCompressor::new(1)));
-    result.insert("zstd-default", lazy!(ZstdCompressor::new(3)));
-    result.insert("zstd-better-compression", lazy!(ZstdCompressor::new(8)));
-    result.insert("deflate-fastest", lazy!(DeflateCompressor::new(1)));
-    result.insert("deflate-default", lazy!(DeflateCompressor::new(6)));
-    result.insert("deflate-better-compression", lazy!(DeflateCompressor::new(9)));
-    result.insert("zlib-fastest", lazy!(ZlibCompressor::new(1)));
-    result.insert("zlib-default", lazy!(ZlibCompressor::new(6)));
-    result.insert("zlib-better-compression", lazy!(ZlibCompressor::new(9)));
-    result.insert("gzip-fastest", lazy!(GzipCompressor::new(1)));
-    result.insert("gzip-default", lazy!(GzipCompressor::new(6)));
-    result.insert("gzip-better-compression", lazy!(GzipCompressor::new(9)));
-    result.insert("bzip2-fastest", lazy!(Bzip2Compressor::new(1)));
-    result.insert("bzip2-default", lazy!(Bzip2Compressor::new(6)));
-    result.insert("bzip2-better-compression", lazy!(Bzip2Compressor::new(9)));
-    result.insert("lzma-fastest", lazy!(LzmaCompressor::new(1)));
-    result.insert("lzma-default", lazy!(LzmaCompressor::new(6)));
-    result.insert("lzma-better-compression", lazy!(LzmaCompressor::new(9)));
-    result.insert("brotli-fastest", lazy!(BrotliCompressor::new(0)));
-    result.insert("brotli-default", lazy!(BrotliCompressor::new(4)));
-    result.insert("brotli-better-compression", lazy!(BrotliCompressor::new(8)));
-    result.insert("LZ4", lazy!(LZ4Compressor::new()));
+    register!("Snappy", CompressionType::SNAPPY, SnappyCompressor::new());
+    register!("zstd-default", CompressionType::ZSTD, ZstdCompressor::new(3));
+    register!("zstd-fastest", CompressionType::ZSTD, ZstdCompressor::new(1));
+    register!("zstd-better-compression", CompressionType::ZSTD, ZstdCompressor::new(8));
+    register!("deflate-default", CompressionType::DEFLATE, DeflateCompressor::new(6));
+    register!("deflate-fastest", CompressionType::DEFLATE, DeflateCompressor::new(1));
+    register!("deflate-better-compression", CompressionType::DEFLATE, DeflateCompressor::new(9));
+    register!("zlib-default", CompressionType::ZLIB, ZlibCompressor::new(6));
+    register!("zlib-fastest", CompressionType::ZLIB, ZlibCompressor::new(1));
+    register!("zlib-better-compression", CompressionType::ZLIB, ZlibCompressor::new(9));
+    register!("gzip-default", CompressionType::GZIP, GzipCompressor::new(6));
+    register!("gzip-fastest", CompressionType::GZIP, GzipCompressor::new(1));
+    register!("gzip-better-compression", CompressionType::GZIP, GzipCompressor::new(9));
+    register!("bzip2-default", CompressionType::BZIP2, Bzip2Compressor::new(6));
+    register!("bzip2-fastest", CompressionType::BZIP2, Bzip2Compressor::new(1));
+    register!("bzip2-better-compression", CompressionType::BZIP2, Bzip2Compressor::new(9));
+    register!("lzma-default", CompressionType::LZMA, LzmaCompressor::new(6));
+    register!("lzma-fastest", CompressionType::LZMA, LzmaCompressor::new(1));
+    register!("lzma-better-compression", CompressionType::LZMA, LzmaCompressor::new(9));
+    register!("brotli-default", CompressionType::BROTLI, BrotliCompressor::new(4));
+    register!("brotli-fastest", CompressionType::BROTLI, BrotliCompressor::new(0));
+    register!("brotli-better-compression", CompressionType::BROTLI, BrotliCompressor::new(8));
+    register!("LZ4", CompressionType::LZ4, LZ4Compressor::new());
 
-    return result;
-}
-
-pub fn new(name: &str) -> Result<Arc<dyn Compressor>> {
-    let available = list_available();
-
-    let factory = available
-        .get(name)
-        .with_context(|| format!("unknown compressor: '{}'", name))?;
-
-    Ok(factory())
-}
-
-pub fn compress(compressor: &dyn Compressor, data: Vec<u8>) -> Result<(Vec<u8>, bool)> {
-    let result = compressor.compress(&data)?;
-
-    Ok(if result.len() < data.len() {
-        (result, true)
-    } else {
-        (data, false)
-    })
+    (by_name, by_type)
 }

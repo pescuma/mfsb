@@ -887,6 +887,7 @@ dependencies = [
  "generic-array",
  "hash-roll",
  "keyring",
+ "lazy_static",
  "libdeflater",
  "lz4_flex",
  "memmap2",

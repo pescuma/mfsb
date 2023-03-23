@@ -238,14 +238,14 @@ fn create_threads(
 fn prepare(
     pack: &mut PackBuilder,
     hasher: &dyn hash::Hasher,
-    compressor: &dyn compress::Compressor,
+    compressor: &compress::Compressor,
     encryptor: &dyn encrypt::Encryptor,
 ) {
     let hash = hash::hash(hasher, pack.get_data());
     pack.set_hash(hash);
 
     let now = Instant::now();
-    let compressed = match compress::compress(compressor, pack.take_data()) {
+    let compressed = match compressor.compress(pack.take_data()) {
         Err(e) => {
             pack.set_error(e);
             return;
@@ -254,8 +254,8 @@ fn prepare(
     };
     pack.set_compressed_data(compressed.0, compressed.1);
     println!(
-        "pack compressed? {} {}% in: {:.0?}",
-        compressed.1,
+        "pack compressed? {:?} {}% in: {:.0?}",
+        compressed.0,
         pack.get_size_compress() * 100 / pack.get_size_chunks(),
         now.elapsed()
     );

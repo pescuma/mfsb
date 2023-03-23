@@ -10,7 +10,7 @@ impl ZstdCompressor {
     }
 }
 
-impl Compressor for ZstdCompressor {
+impl CompressorImpl for ZstdCompressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
         let result = ::zstd::stream::encode_all(data, self.level)?;
         Ok(result)

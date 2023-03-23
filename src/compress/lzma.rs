@@ -14,7 +14,7 @@ impl LzmaCompressor {
     }
 }
 
-impl Compressor for LzmaCompressor {
+impl CompressorImpl for LzmaCompressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut compressor = XzEncoder::new(data, self.level);
         let mut result = Vec::new();

@@ -4,7 +4,7 @@ use std::sync::Arc;
 pub struct Config {
     pub hasher: Arc<dyn hash::Hasher>,
     pub chunker: Arc<dyn chunk::Chunker>,
-    pub compressor: Arc<dyn compress::Compressor>,
+    pub compressor: Arc<compress::Compressor>,
     pub encryptor: Arc<dyn encrypt::Encryptor>,
 }
 
@@ -15,7 +15,7 @@ impl Config {
             // chunk: Box::newChaCha20Poly1305(chunk::rabin_mmap::RabinMmap::newChaCha20Poly1305(1 * 1024 * 1024)),
             // chunk: Box::newChaCha20Poly1305(chunk::hash_roll_mmap::FastCDC::newChaCha20Poly1305(1 * 1024 * 1024)),
             chunker: chunk::new("Rabin64 (mmap)", 1 * 1024 * 1024).unwrap(),
-            compressor: compress::new("Snappy").unwrap(),
+            compressor: compress::Compressor::build_by_name("Snappy").unwrap(),
             encryptor: encrypt::new("ChaCha20Poly1305", "1234").unwrap(),
         }
     }

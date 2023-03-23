@@ -10,7 +10,7 @@ impl ZlibCompressor {
     }
 }
 
-impl Compressor for ZlibCompressor {
+impl CompressorImpl for ZlibCompressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut compressor = libdeflater::Compressor::new(
             libdeflater::CompressionLvl::new(self.level).unwrap()

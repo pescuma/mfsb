@@ -10,7 +10,7 @@ impl LZ4Compressor {
     }
 }
 
-impl Compressor for LZ4Compressor {
+impl CompressorImpl for LZ4Compressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
         let result = compress_prepend_size(data);
         Ok(result)

@@ -15,7 +15,7 @@ impl Bzip2Compressor {
     }
 }
 
-impl Compressor for Bzip2Compressor {
+impl CompressorImpl for Bzip2Compressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut compressor = BzEncoder::new(data, Compression::new(self.level));
         let mut result = Vec::new();

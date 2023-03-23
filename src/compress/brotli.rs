@@ -15,7 +15,7 @@ impl BrotliCompressor {
     }
 }
 
-impl Compressor for BrotliCompressor {
+impl CompressorImpl for BrotliCompressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
         let encoder = BrotliEncoderOptions::new()
             .quality(Quality::new(self.level)?)

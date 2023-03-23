@@ -10,7 +10,7 @@ impl GzipCompressor {
     }
 }
 
-impl Compressor for GzipCompressor {
+impl CompressorImpl for GzipCompressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut compressor = libdeflater::Compressor::new(
             libdeflater::CompressionLvl::new(self.level).unwrap()

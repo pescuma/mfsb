@@ -8,3 +8,6 @@ pub mod pipeline;
 pub mod snapshot;
 
 pub use anyhow::{Error, Result};
+
+#[macro_use]
+extern crate lazy_static;
