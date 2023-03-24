@@ -238,11 +238,11 @@ fn create_threads(
 
 fn prepare(
     pack: &mut PackBuilder,
-    hasher: &dyn hash::Hasher,
+    hasher: &hash::Hasher,
     compressor: &compress::Compressor,
     encryptor: &dyn encrypt::Encryptor,
 ) {
-    let hash = hash::hash(hasher, pack.get_data());
+    let hash = hasher.hash(pack.get_data());
     pack.set_hash(hash);
 
     let now = Instant::now();

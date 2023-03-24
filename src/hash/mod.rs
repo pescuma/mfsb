@@ -1,38 +1,92 @@
-mod blake3;
-
-use anyhow::{Context, Result};
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::sync::Arc;
 
-pub trait Hasher: Send + Sync {
+use anyhow::{Context, Result};
+
+mod digest;
+mod blake3;
+
+pub struct Hasher {
+    name: &'static str,
+    ht: HasherType,
+    inner: Box<dyn HasherImpl>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(non_camel_case_types)]
+pub enum HasherType {
+    Blake2s_256,
+    Blake2b_512,
+    Blake3,
+    Sha2_256,
+    Sha2_512,
+    Sha3_256,
+    Sha3_512,
+    Tiger,
+    Whirlpool,
+}
+
+trait HasherImpl: Send + Sync {
     fn hash(&self, data: &[u8]) -> Vec<u8>;
 }
 
-pub type HasherFactoryMap = HashMap<&'static str, Box<dyn Fn() -> Arc<dyn Hasher>>>;
+impl Hasher {
+    pub fn list_available_names() -> Vec<&'static str> {
+        return REGISTERED.keys().map(|k| *k).collect();
+    }
 
-pub fn list_available() -> HasherFactoryMap {
-    let mut result: HasherFactoryMap = HashMap::new();
-    macro_rules! lazy {
-        ($f:expr) => {
-            Box::new(|| Arc::new($f))
+    pub fn build_by_name(name: &str) -> Result<Arc<Hasher>> {
+        let factory = REGISTERED
+            .get(name)
+            .with_context(|| format!("unknown hasher: '{}'", name))?;
+
+        Ok(factory())
+    }
+
+    fn new(name: &'static str, ct: HasherType, inner: Box<dyn HasherImpl>) -> Self {
+        Self { name, ht: ct, inner }
+    }
+
+    pub fn get_name(&self) -> &'static str {
+        self.name
+    }
+
+    pub fn get_type(&self) -> HasherType {
+        self.ht
+    }
+
+    pub fn hash(&self, data: &[u8]) -> Vec<u8> {
+        self.inner.hash(data)
+    }
+}
+
+type Factory = Box<dyn Fn() -> Arc<Hasher> + Send + Sync>;
+
+lazy_static! {
+    static ref REGISTERED: HashMap<&'static str, Factory> = create_hashers();
+}
+
+fn create_hashers() -> HashMap<&'static str, Factory> {
+    let mut by_name = HashMap::new();
+
+    macro_rules! register {
+        ($n:expr, $t:expr,  $f:expr) => {
+            let factory : Factory = Box::new(|| Arc::new(Hasher::new($n, $t, Box::new($f))));
+            by_name.insert($n, factory);
         };
     }
 
-    result.insert("Blake3", lazy!(blake3::Blake3Hasher::new()));
+    register!("Blake2s-256", HasherType::Blake2s_256, digest::Blake2s_256_Hasher::new());
+    register!("Blake2d-512", HasherType::Blake2b_512, digest::Blake2b_512_Hasher::new());
+    register!("Blake3", HasherType::Blake3, blake3::Blake3Hasher::new());
+    register!("SHA-2-256", HasherType::Sha2_256, digest::Sha2_256_Hasher::new());
+    register!("SHA-2-512", HasherType::Sha2_512, digest::Sha2_512_Hasher::new());
+    register!("SHA-3-256", HasherType::Sha3_256, digest::Sha3_256_Hasher::new());
+    register!("SHA-3-512", HasherType::Sha3_512, digest::Sha3_512_Hasher::new());
+    register!("Tiger", HasherType::Tiger, digest::TigerHasher::new());
+    register!("Whirlpool", HasherType::Whirlpool, digest::WhirlpoolHasher::new());
 
-    return result;
+    by_name
 }
 
-pub fn new(name: &str) -> Result<Arc<dyn Hasher>> {
-    let available = list_available();
-
-    let factory = available
-        .get(name)
-        .with_context(|| format!("unknown hasher: '{}'", name))?;
-
-    Ok(factory())
-}
-
-pub fn hash(hasher: &dyn Hasher, data: &[u8]) -> Vec<u8> {
-    hasher.hash(data)
-}

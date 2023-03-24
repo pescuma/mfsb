@@ -1,8 +1,10 @@
-use crate::snapshot::builder::{ChunkBuilder, PathBuilder, SnapshotBuilder};
-use anyhow::Error;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+
+use anyhow::Error;
+
 use crate::compress::CompressionType;
+use crate::snapshot::builder::{ChunkBuilder, PathBuilder, SnapshotBuilder};
 
 pub struct PackBuilder {
     pub chunks: Vec<(

@@ -8,7 +8,7 @@ impl Blake3Hasher {
     }
 }
 
-impl Hasher for Blake3Hasher {
+impl HasherImpl for Blake3Hasher {
     fn hash(&self, data: &[u8]) -> Vec<u8> {
         let hash = ::blake3::hash(data);
         Vec::from(*hash.as_bytes())
