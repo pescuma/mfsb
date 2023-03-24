@@ -3,12 +3,16 @@ use ::digest::Digest;
 use super::*;
 
 pub struct Hasher<T>
-    where T: Digest + Send + Sync {
+where
+    T: Digest + Send + Sync,
+{
     _marker: std::marker::PhantomData<T>,
 }
 
 impl<T> Hasher<T>
-    where T: Digest + Send + Sync {
+where
+    T: Digest + Send + Sync,
+{
     pub fn new() -> Self {
         Self {
             _marker: std::marker::PhantomData,
@@ -17,7 +21,9 @@ impl<T> Hasher<T>
 }
 
 impl<T> HasherImpl for Hasher<T>
-    where T: Digest + Send + Sync {
+where
+    T: Digest + Send + Sync,
+{
     fn hash(&self, data: &[u8]) -> Vec<u8> {
         let hash = T::digest(data);
         hash.to_vec()

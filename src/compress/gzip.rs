@@ -12,9 +12,7 @@ impl GzipCompressor {
 
 impl CompressorImpl for GzipCompressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let mut compressor = libdeflater::Compressor::new(
-            libdeflater::CompressionLvl::new(self.level).unwrap()
-        );
+        let mut compressor = libdeflater::Compressor::new(libdeflater::CompressionLvl::new(self.level).unwrap());
 
         let size = compressor.gzip_compress_bound(data.len());
         let mut result = vec![0; size];

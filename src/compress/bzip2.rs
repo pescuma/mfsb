@@ -1,7 +1,9 @@
-use super::*;
 use std::io::prelude::*;
+
+use ::bzip2::read::{BzDecoder, BzEncoder};
 use ::bzip2::Compression;
-use ::bzip2::read::{BzEncoder, BzDecoder};
+
+use super::*;
 
 pub struct Bzip2Compressor {
     level: u32,
@@ -9,9 +11,7 @@ pub struct Bzip2Compressor {
 
 impl Bzip2Compressor {
     pub fn new(level: u32) -> Self {
-        Bzip2Compressor {
-            level
-        }
+        Bzip2Compressor { level }
     }
 }
 

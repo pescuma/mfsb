@@ -1,12 +1,10 @@
-use anyhow::{Error, Result};
-use relative_path::RelativePathBuf;
 use std::path::PathBuf;
 use std::{fs, io};
 
-pub fn path_walk(
-    root: PathBuf,
-    mut cb: impl FnMut(PathBuf, RelativePathBuf, io::Result<fs::Metadata>),
-) -> Result<()> {
+use anyhow::{Error, Result};
+use relative_path::RelativePathBuf;
+
+pub fn path_walk(root: PathBuf, mut cb: impl FnMut(PathBuf, RelativePathBuf, io::Result<fs::Metadata>)) -> Result<()> {
     let root_metadata = fs::metadata(&root)?;
 
     if root_metadata.is_file() {
@@ -29,10 +27,7 @@ pub fn path_walk(
 
         Ok(())
     } else {
-        Err(Error::msg(format!(
-            "should be a dir or a file (is {:?})",
-            root_metadata.file_type()
-        )))
+        Err(Error::msg(format!("should be a dir or a file (is {:?})", root_metadata.file_type())))
     }
 }
 
@@ -102,10 +97,7 @@ fn walk_one(
                 queue.push((entry_path, Some(entry_metadata)));
             }
             entry_metadata => {
-                panic!(
-                    "{:?}: should be dir or file: {:?}",
-                    entry_path, entry_metadata
-                );
+                panic!("{:?}: should be dir or file: {:?}", entry_path, entry_metadata);
             }
         };
     }

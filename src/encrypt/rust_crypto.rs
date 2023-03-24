@@ -3,8 +3,8 @@ use ::chacha20poly1305::aead::KeyInit;
 use ::chacha20poly1305::aead::OsRng;
 use ::chacha20poly1305::AeadInPlace;
 use ::chacha20poly1305::ChaCha20Poly1305;
-use generic_array::GenericArray;
 use generic_array::typenum::Unsigned;
+use generic_array::GenericArray;
 
 use super::*;
 

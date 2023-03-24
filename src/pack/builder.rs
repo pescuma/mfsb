@@ -7,13 +7,7 @@ use crate::compress::CompressionType;
 use crate::snapshot::builder::{ChunkBuilder, PathBuilder, SnapshotBuilder};
 
 pub struct PackBuilder {
-    pub chunks: Vec<(
-        Arc<SnapshotBuilder>,
-        Arc<PathBuilder>,
-        Arc<ChunkBuilder>,
-        u32,
-        u32,
-    )>,
+    pub chunks: Vec<(Arc<SnapshotBuilder>, Arc<PathBuilder>, Arc<ChunkBuilder>, u32, u32)>,
     data: Option<Vec<u8>>,
     hash: Vec<u8>,
     chunks_size: u32,

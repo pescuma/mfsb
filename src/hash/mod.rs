@@ -44,12 +44,8 @@ impl Hasher {
         Ok(factory())
     }
 
-    fn new(name: &'static str, ct: HasherType, inner: Box<dyn HasherImpl>) -> Self {
-        Self {
-            name,
-            ht: ct,
-            inner,
-        }
+    fn new(name: &'static str, ht: HasherType, inner: Box<dyn HasherImpl>) -> Self {
+        Self { name, ht, inner }
     }
 
     pub fn get_name(&self) -> &'static str {
@@ -83,16 +79,8 @@ fn create_hashers() -> HashMap<&'static str, Factory> {
 
     use HasherType::*;
 
-    register!(
-        "Blake2s-256",
-        Blake2s_256,
-        digest::Blake2s_256_Hasher::new()
-    );
-    register!(
-        "Blake2d-512",
-        Blake2b_512,
-        digest::Blake2b_512_Hasher::new()
-    );
+    register!("Blake2s-256", Blake2s_256, digest::Blake2s_256_Hasher::new());
+    register!("Blake2d-512", Blake2b_512, digest::Blake2b_512_Hasher::new());
     register!("Blake3", Blake3, blake3::Blake3Hasher::new());
     register!("SHA-2-256", Sha2_256, digest::Sha2_256_Hasher::new());
     register!("SHA-2-512", Sha2_512, digest::Sha2_512_Hasher::new());

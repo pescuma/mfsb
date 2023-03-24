@@ -5,10 +5,10 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 
+mod cdchunking;
 mod fastcdc;
 mod hash_roll;
 mod rabin;
-mod cdchunking;
 
 pub struct Chunker {
     name: &'static str,
@@ -53,7 +53,12 @@ impl Chunker {
     }
 
     fn new(name: &'static str, ct: ChunkerType, block_size: u32, inner: Box<dyn ChunkerImpl>) -> Self {
-        Self { name, ct, block_size, inner }
+        Self {
+            name,
+            ct,
+            block_size,
+            inner,
+        }
     }
 
     pub fn get_name(&self) -> &'static str {
@@ -95,23 +100,26 @@ fn create_chunkers() -> HashMap<&'static str, Factory> {
 
     macro_rules! register {
         ($n:expr, $t:expr,  $f:expr) => {
-            let factory : Factory = Box::new(|block_size| Arc::new(Chunker::new($n, $t, block_size, Box::new($f(block_size)))));
+            let factory: Factory =
+                Box::new(|block_size| Arc::new(Chunker::new($n, $t, block_size, Box::new($f(block_size)))));
             by_name.insert($n, factory);
         };
     }
 
-    register!("FastCDC v2020 (mmap)", ChunkerType::FastCDC_v2020_mmap, |block_size| fastcdc::FastCDC2020Mmap::new(block_size));
-    register!("FastCDC", ChunkerType::FastCDC, |block_size| hash_roll::FastCdc::new(block_size, false));
-    register!("FastCDC (mmap)", ChunkerType::FastCDC_mmap, |block_size| hash_roll::FastCdc::new(block_size, true));
-    register!("Roll Sum", ChunkerType::RollSum, |block_size| hash_roll::RollSum::new(block_size, false));
-    register!("Roll Sum (mmap)", ChunkerType::RollSum_mmap, |block_size| hash_roll::RollSum::new(block_size, true));
-    register!("ZPAQ", ChunkerType::ZPAQ, |block_size| hash_roll::ZPAQ::new(block_size, false));
-    register!("ZPAQ (mmap)", ChunkerType::ZPAQ_mmap, |block_size| hash_roll::ZPAQ::new(block_size, true));
-    register!("RAM", ChunkerType::RAM, |block_size| hash_roll::RAM::new(block_size, false));
-    register!("RAM (mmap)", ChunkerType::RAM_mmap,  |block_size| hash_roll::RAM::new(block_size, true));
-    register!("Rabin64", ChunkerType::Rabin64, |block_size| rabin::Rabin::new(block_size, false));
-    register!("Rabin64 (mmap)", ChunkerType::Rabin64_mmap, |block_size| rabin::Rabin::new(block_size, true));
-    register!("ZPAQ (cc)", ChunkerType::ZPAQ_cc, |block_size| cdchunking::ZPAQ::new(block_size));
+    use ChunkerType::*;
+
+    register!("FastCDC v2020 (mmap)", FastCDC_v2020_mmap, |block_size| fastcdc::FastCDC2020Mmap::new(block_size));
+    register!("FastCDC", FastCDC, |block_size| hash_roll::FastCdc::new(block_size, false));
+    register!("FastCDC (mmap)", FastCDC_mmap, |block_size| hash_roll::FastCdc::new(block_size, true));
+    register!("Roll Sum", RollSum, |block_size| hash_roll::RollSum::new(block_size, false));
+    register!("Roll Sum (mmap)", RollSum_mmap, |block_size| hash_roll::RollSum::new(block_size, true));
+    register!("ZPAQ", ZPAQ, |block_size| hash_roll::ZPAQ::new(block_size, false));
+    register!("ZPAQ (mmap)", ZPAQ_mmap, |block_size| hash_roll::ZPAQ::new(block_size, true));
+    register!("RAM", RAM, |block_size| hash_roll::RAM::new(block_size, false));
+    register!("RAM (mmap)", RAM_mmap, |block_size| hash_roll::RAM::new(block_size, true));
+    register!("Rabin64", Rabin64, |block_size| rabin::Rabin::new(block_size, false));
+    register!("Rabin64 (mmap)", Rabin64_mmap, |block_size| rabin::Rabin::new(block_size, true));
+    register!("ZPAQ (cc)", ZPAQ_cc, |block_size| cdchunking::ZPAQ::new(block_size));
 
     by_name
 }

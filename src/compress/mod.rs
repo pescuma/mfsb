@@ -1,25 +1,27 @@
-mod snappy;
-mod zstd;
-mod deflate;
-mod zlib;
-mod lz4;
-mod gzip;
-mod bzip2;
-mod lzma;
-mod brotli;
-
-use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
+
+use anyhow::{Context, Result};
+
 use crate::compress::brotli::BrotliCompressor;
-use crate::compress::snappy::SnappyCompressor;
-use crate::compress::zstd::ZstdCompressor;
 use crate::compress::bzip2::Bzip2Compressor;
 use crate::compress::deflate::DeflateCompressor;
 use crate::compress::gzip::GzipCompressor;
 use crate::compress::lz4::LZ4Compressor;
 use crate::compress::lzma::LzmaCompressor;
+use crate::compress::snappy::SnappyCompressor;
 use crate::compress::zlib::ZlibCompressor;
+use crate::compress::zstd::ZstdCompressor;
+
+mod brotli;
+mod bzip2;
+mod deflate;
+mod gzip;
+mod lz4;
+mod lzma;
+mod snappy;
+mod zlib;
+mod zstd;
 
 pub struct Compressor {
     name: &'static str,
@@ -40,7 +42,6 @@ pub enum CompressionType {
     LZ4,
 }
 
-/// Trait that must be implemented by new compressors
 trait CompressorImpl: Send + Sync {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>>;
 }
@@ -51,7 +52,8 @@ impl Compressor {
     }
 
     pub fn build_by_name(name: &str) -> Result<Arc<Compressor>> {
-        let compressor = REGISTERED.0
+        let compressor = REGISTERED
+            .0
             .get(name)
             .with_context(|| format!("unknown compressor: '{}'", name))?;
 
@@ -59,7 +61,8 @@ impl Compressor {
     }
 
     pub fn build_by_type(ct: CompressionType) -> Result<Arc<Compressor>> {
-        let compressor = REGISTERED.1
+        let compressor = REGISTERED
+            .1
             .get(&ct)
             .with_context(|| format!("unknown compressor: {:?}", ct))?;
 
@@ -90,7 +93,8 @@ impl Compressor {
 }
 
 lazy_static! {
-    static ref REGISTERED: (HashMap<&'static str, Arc<Compressor>>, HashMap<CompressionType, Arc<Compressor>>) = create_compressors();
+    static ref REGISTERED: (HashMap<&'static str, Arc<Compressor>>, HashMap<CompressionType, Arc<Compressor>>) =
+        create_compressors();
 }
 
 fn create_compressors() -> (HashMap<&'static str, Arc<Compressor>>, HashMap<CompressionType, Arc<Compressor>>) {
@@ -107,29 +111,31 @@ fn create_compressors() -> (HashMap<&'static str, Arc<Compressor>>, HashMap<Comp
         };
     }
 
-    register!("Snappy", CompressionType::SNAPPY, SnappyCompressor::new());
-    register!("zstd-default", CompressionType::ZSTD, ZstdCompressor::new(3));
-    register!("zstd-fastest", CompressionType::ZSTD, ZstdCompressor::new(1));
-    register!("zstd-better-compression", CompressionType::ZSTD, ZstdCompressor::new(8));
-    register!("deflate-default", CompressionType::DEFLATE, DeflateCompressor::new(6));
-    register!("deflate-fastest", CompressionType::DEFLATE, DeflateCompressor::new(1));
-    register!("deflate-better-compression", CompressionType::DEFLATE, DeflateCompressor::new(9));
-    register!("zlib-default", CompressionType::ZLIB, ZlibCompressor::new(6));
-    register!("zlib-fastest", CompressionType::ZLIB, ZlibCompressor::new(1));
-    register!("zlib-better-compression", CompressionType::ZLIB, ZlibCompressor::new(9));
-    register!("gzip-default", CompressionType::GZIP, GzipCompressor::new(6));
-    register!("gzip-fastest", CompressionType::GZIP, GzipCompressor::new(1));
-    register!("gzip-better-compression", CompressionType::GZIP, GzipCompressor::new(9));
-    register!("bzip2-default", CompressionType::BZIP2, Bzip2Compressor::new(6));
-    register!("bzip2-fastest", CompressionType::BZIP2, Bzip2Compressor::new(1));
-    register!("bzip2-better-compression", CompressionType::BZIP2, Bzip2Compressor::new(9));
-    register!("lzma-default", CompressionType::LZMA, LzmaCompressor::new(6));
-    register!("lzma-fastest", CompressionType::LZMA, LzmaCompressor::new(1));
-    register!("lzma-better-compression", CompressionType::LZMA, LzmaCompressor::new(9));
-    register!("brotli-default", CompressionType::BROTLI, BrotliCompressor::new(4));
-    register!("brotli-fastest", CompressionType::BROTLI, BrotliCompressor::new(0));
-    register!("brotli-better-compression", CompressionType::BROTLI, BrotliCompressor::new(8));
-    register!("LZ4", CompressionType::LZ4, LZ4Compressor::new());
+    use CompressionType::*;
+
+    register!("Snappy", SNAPPY, SnappyCompressor::new());
+    register!("zstd-default", ZSTD, ZstdCompressor::new(3));
+    register!("zstd-fastest", ZSTD, ZstdCompressor::new(1));
+    register!("zstd-better-compression", ZSTD, ZstdCompressor::new(8));
+    register!("deflate-default", DEFLATE, DeflateCompressor::new(6));
+    register!("deflate-fastest", DEFLATE, DeflateCompressor::new(1));
+    register!("deflate-better-compression", DEFLATE, DeflateCompressor::new(9));
+    register!("zlib-default", ZLIB, ZlibCompressor::new(6));
+    register!("zlib-fastest", ZLIB, ZlibCompressor::new(1));
+    register!("zlib-better-compression", ZLIB, ZlibCompressor::new(9));
+    register!("gzip-default", GZIP, GzipCompressor::new(6));
+    register!("gzip-fastest", GZIP, GzipCompressor::new(1));
+    register!("gzip-better-compression", GZIP, GzipCompressor::new(9));
+    register!("bzip2-default", BZIP2, Bzip2Compressor::new(6));
+    register!("bzip2-fastest", BZIP2, Bzip2Compressor::new(1));
+    register!("bzip2-better-compression", BZIP2, Bzip2Compressor::new(9));
+    register!("lzma-default", LZMA, LzmaCompressor::new(6));
+    register!("lzma-fastest", LZMA, LzmaCompressor::new(1));
+    register!("lzma-better-compression", LZMA, LzmaCompressor::new(9));
+    register!("brotli-default", BROTLI, BrotliCompressor::new(4));
+    register!("brotli-fastest", BROTLI, BrotliCompressor::new(0));
+    register!("brotli-better-compression", BROTLI, BrotliCompressor::new(8));
+    register!("LZ4", LZ4, LZ4Compressor::new());
 
     (by_name, by_type)
 }

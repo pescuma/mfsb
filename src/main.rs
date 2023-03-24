@@ -5,8 +5,8 @@ use std::time::Instant;
 
 use anyhow::Error;
 
-use mfsb::*;
 use mfsb::pack::builder::PackBuilder;
+use mfsb::*;
 
 fn main() {
     let root = "C:\\Users\\rdomenecci\\Books";
@@ -26,10 +26,7 @@ fn create_snapshot(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
     assert_eq!(snapshot.is_complete(), true);
 }
 
-fn create_threads(
-    threads: &mut Vec<thread::JoinHandle<()>>,
-    snapshot: Arc<snapshot::builder::SnapshotBuilder>,
-) {
+fn create_threads(threads: &mut Vec<thread::JoinHandle<()>>, snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
     let config = pipeline::Config::new();
     let pack_size: u32 = 20 * 1024 * 1024;
     let chunks_per_pack = pack_size / config.chunker.get_max_block_size();
@@ -65,23 +62,17 @@ fn create_threads(
 
                     let mut count = 0;
 
-                    let result = path_walk::path_walk(
-                        snapshot.get_root().to_path_buf(),
-                        |path, relative_path, metadata| {
+                    let result =
+                        path_walk::path_walk(snapshot.get_root().to_path_buf(), |path, relative_path, metadata| {
                             match metadata {
                                 Err(err) => {
                                     let path = snapshot.add_path(path, relative_path, None);
                                     path.set_error(err.into());
                                 }
                                 Ok(metadata) => {
-                                    let len = if metadata.is_file() {
-                                        metadata.len()
-                                    } else {
-                                        0
-                                    };
+                                    let len = if metadata.is_file() { metadata.len() } else { 0 };
 
-                                    let path =
-                                        snapshot.add_path(path, relative_path, Some(metadata));
+                                    let path = snapshot.add_path(path, relative_path, Some(metadata));
 
                                     if len == 0 {
                                         path.set_finished_adding_chunks(0);
@@ -92,8 +83,7 @@ fn create_threads(
                             }
 
                             count += 1;
-                        },
-                    );
+                        });
 
                     println!("path walk of {} items in: {:.0?}", count, now.elapsed());
 
@@ -119,17 +109,13 @@ fn create_threads(
 
                     let mut chunks = 0;
 
-                    let result = chunker.split(
-                        file.get_path(),
-                        file.get_metadata().unwrap(),
-                        &mut |data| {
-                            let chunk = file.add_chunk(data.len() as u32);
-                            hash_chunk_tx
-                                .send((snapshot.clone(), file.clone(), chunk, data))
-                                .unwrap();
-                            chunks += 1;
-                        },
-                    );
+                    let result = chunker.split(file.get_path(), file.get_metadata().unwrap(), &mut |data| {
+                        let chunk = file.add_chunk(data.len() as u32);
+                        hash_chunk_tx
+                            .send((snapshot.clone(), file.clone(), chunk, data))
+                            .unwrap();
+                        chunks += 1;
+                    });
                     match result {
                         Err(e) => file.set_error(e),
                         Ok(_) => file.set_finished_adding_chunks(chunks),
@@ -163,9 +149,8 @@ fn create_threads(
         thread::Builder::new()
             .name(String::from("pack"))
             .spawn({
-                let pack_capacity = pack_size
-                    + config.chunker.get_max_block_size()
-                    + config.encryptor.get_extra_space_needed();
+                let pack_capacity =
+                    pack_size + config.chunker.get_max_block_size() + config.encryptor.get_extra_space_needed();
                 let hasher = config.hasher.clone();
                 let compressor = config.compressor.clone();
                 let encryptor = config.encryptor.clone();
@@ -183,12 +168,7 @@ fn create_threads(
 
                         if pack.get_size_chunks() > pack_size {
                             println!("pack finished: {}", pack.get_size_chunks());
-                            prepare(
-                                &mut pack,
-                                hasher.as_ref(),
-                                compressor.as_ref(),
-                                encryptor.as_ref(),
-                            );
+                            prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
 
                             store_pack_tx.send(pack).unwrap();
                             pack = PackBuilder::new(pack_capacity);
@@ -197,12 +177,7 @@ fn create_threads(
 
                     if pack.get_size_chunks() > 0 {
                         println!("pack finished: {}", pack.get_size_chunks());
-                        prepare(
-                            &mut pack,
-                            hasher.as_ref(),
-                            compressor.as_ref(),
-                            encryptor.as_ref(),
-                        );
+                        prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
 
                         store_pack_tx.send(pack).unwrap();
                     }
@@ -270,9 +245,5 @@ fn prepare(
         Ok(o) => o,
     };
     pack.set_encrypted_data(encrypted);
-    println!(
-        "pack encrypted {}% in: {:.0?}",
-        pack.get_size_encrypt() * 100 / pack.get_size_compress(),
-        now.elapsed()
-    );
+    println!("pack encrypted {}% in: {:.0?}", pack.get_size_encrypt() * 100 / pack.get_size_compress(), now.elapsed());
 }

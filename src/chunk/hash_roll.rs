@@ -1,5 +1,5 @@
-use std::{fs, io};
 use std::io::Read;
+use std::{fs, io};
 
 use ::hash_roll as hr;
 use ::hash_roll::ChunkIncr;
@@ -31,12 +31,8 @@ impl ChunkerImpl for FastCdc {
     }
 
     fn split(&self, file: fs::File, cb: &mut dyn FnMut(Vec<u8>)) -> Result<()> {
-        let cfg = hr::fastcdc::FastCdc::new(
-            &hr::gear_table::GEAR_64,
-            self.block_min,
-            self.block_normal,
-            self.block_max,
-        );
+        let cfg =
+            hr::fastcdc::FastCdc::new(&hr::gear_table::GEAR_64, self.block_min, self.block_normal, self.block_max);
 
         if self.mmap {
             split_mmap(cfg, file, cb)

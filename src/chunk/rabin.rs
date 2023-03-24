@@ -69,14 +69,9 @@ impl Rabin {
         while mmap.len() - pos > self.block_min {
             let mut chunk_len = self.block_min;
 
-            rabin.reset_and_prefill_window(
-                &mut mmap[pos + chunk_len - 64..pos + chunk_len].iter().copied(),
-            );
+            rabin.reset_and_prefill_window(&mut mmap[pos + chunk_len - 64..pos + chunk_len].iter().copied());
 
-            while !predicate(rabin.hash)
-                && chunk_len < self.block_max
-                && pos + chunk_len < mmap.len()
-            {
+            while !predicate(rabin.hash) && chunk_len < self.block_max && pos + chunk_len < mmap.len() {
                 rabin.slide(&mmap[pos + chunk_len]);
                 chunk_len += 1;
             }
@@ -92,7 +87,6 @@ impl Rabin {
         Ok(())
     }
 }
-
 
 impl ChunkerImpl for Rabin {
     fn get_max_block_size(&self) -> u32 {

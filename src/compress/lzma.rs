@@ -1,6 +1,8 @@
-use super::*;
 use std::io::prelude::*;
-use xz2::read::{XzEncoder, XzDecoder};
+
+use xz2::read::{XzDecoder, XzEncoder};
+
+use super::*;
 
 pub struct LzmaCompressor {
     level: u32,
@@ -8,9 +10,7 @@ pub struct LzmaCompressor {
 
 impl LzmaCompressor {
     pub fn new(level: u32) -> Self {
-        LzmaCompressor {
-            level
-        }
+        LzmaCompressor { level }
     }
 }
 

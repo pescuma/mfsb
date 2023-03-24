@@ -12,9 +12,7 @@ impl ZlibCompressor {
 
 impl CompressorImpl for ZlibCompressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let mut compressor = libdeflater::Compressor::new(
-            libdeflater::CompressionLvl::new(self.level).unwrap()
-        );
+        let mut compressor = libdeflater::Compressor::new(libdeflater::CompressionLvl::new(self.level).unwrap());
 
         let size = compressor.zlib_compress_bound(data.len());
         let mut result = vec![0; size];

@@ -101,18 +101,10 @@ fn create_encryptors() -> HashMap<&'static str, Factory> {
 
     use EncryptorType::*;
 
-    register!("ChaCha20Poly1305 (sw)", ChaCha20Poly1305_sw, |key| {
-        rust_crypto::ChaCha20Poly1305Encryptor::new(key)
-    });
-    register!("ChaCha20Poly1305", ChaCha20Poly1305, |key| {
-        ring_crypto::RingEncryptor::new_chacha20_poly1305(key)
-    });
-    register!("AES 256 GCM", AES_256_GCM, |key| {
-        ring_crypto::RingEncryptor::new_aes_256_gcm(key)
-    });
-    register!("AES 128 GCM", AES_128_GCM, |key| {
-        ring_crypto::RingEncryptor::new_aes_128_gcm(key)
-    });
+    register!("ChaCha20Poly1305 (sw)", ChaCha20Poly1305_sw, |key| rust_crypto::ChaCha20Poly1305Encryptor::new(key));
+    register!("ChaCha20Poly1305", ChaCha20Poly1305, |key| ring_crypto::RingEncryptor::new_chacha20_poly1305(key));
+    register!("AES 256 GCM", AES_256_GCM, |key| ring_crypto::RingEncryptor::new_aes_256_gcm(key));
+    register!("AES 128 GCM", AES_128_GCM, |key| ring_crypto::RingEncryptor::new_aes_128_gcm(key));
 
     by_name
 }

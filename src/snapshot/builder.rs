@@ -1,10 +1,12 @@
-use crate::pack::location::PackLocation;
-use anyhow::Error;
-use relative_path::{RelativePath, RelativePathBuf};
 use std::fs::Metadata;
 use std::path::{Path, PathBuf};
 use std::sync::{atomic, Arc, Mutex};
 use std::time::{Duration, Instant};
+
+use anyhow::Error;
+use relative_path::{RelativePath, RelativePathBuf};
+
+use crate::pack::location::PackLocation;
 
 pub struct SnapshotBuilder {
     root: PathBuf,
@@ -45,8 +47,7 @@ impl SnapshotBuilder {
     pub fn set_finished_adding_paths(&self, path_count: u32) {
         assert_eq!(path_count, self.paths.lock().unwrap().len() as u32);
 
-        self.paths_count
-            .store(path_count as i32, atomic::Ordering::SeqCst);
+        self.paths_count.store(path_count as i32, atomic::Ordering::SeqCst);
     }
 
     pub fn set_error(&self, err: Error) {
@@ -74,11 +75,7 @@ pub struct PathBuilder {
 }
 
 impl PathBuilder {
-    fn new(
-        path: PathBuf,
-        relative_path: RelativePathBuf,
-        metadata: Option<Metadata>,
-    ) -> Arc<PathBuilder> {
+    fn new(path: PathBuf, relative_path: RelativePathBuf, metadata: Option<Metadata>) -> Arc<PathBuilder> {
         Arc::new(PathBuilder {
             path,
             relative_path,
@@ -115,8 +112,7 @@ impl PathBuilder {
     pub fn set_finished_adding_chunks(&self, chunk_count: u32) {
         assert_eq!(chunk_count, self.chunks.lock().unwrap().len() as u32);
 
-        self.chunk_count
-            .store(chunk_count as i32, atomic::Ordering::SeqCst);
+        self.chunk_count.store(chunk_count as i32, atomic::Ordering::SeqCst);
     }
 
     pub fn set_error(&self, err: Error) {
@@ -174,7 +170,6 @@ impl ChunkBuilder {
     }
 
     pub fn is_complete(&self) -> bool {
-        return !self.hash.lock().unwrap().is_empty()
-            && self.pack_location.lock().unwrap().is_some();
+        return !self.hash.lock().unwrap().is_empty() && self.pack_location.lock().unwrap().is_some();
     }
 }
