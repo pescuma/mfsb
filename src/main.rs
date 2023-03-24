@@ -240,7 +240,7 @@ fn prepare(
     pack: &mut PackBuilder,
     hasher: &hash::Hasher,
     compressor: &compress::Compressor,
-    encryptor: &dyn encrypt::Encryptor,
+    encryptor: &encrypt::Encryptor,
 ) {
     let hash = hasher.hash(pack.get_data());
     pack.set_hash(hash);
@@ -262,7 +262,7 @@ fn prepare(
     );
 
     let now = Instant::now();
-    let encrypted = match encrypt::encrypt(encryptor, pack.take_data()) {
+    let encrypted = match encryptor.encrypt(pack.take_data()) {
         Err(e) => {
             pack.set_error(e);
             return;

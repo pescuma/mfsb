@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 
-mod digest;
 mod blake3;
+mod digest;
 
 pub struct Hasher {
     name: &'static str,
@@ -45,7 +45,11 @@ impl Hasher {
     }
 
     fn new(name: &'static str, ct: HasherType, inner: Box<dyn HasherImpl>) -> Self {
-        Self { name, ht: ct, inner }
+        Self {
+            name,
+            ht: ct,
+            inner,
+        }
     }
 
     pub fn get_name(&self) -> &'static str {
@@ -72,21 +76,30 @@ fn create_hashers() -> HashMap<&'static str, Factory> {
 
     macro_rules! register {
         ($n:expr, $t:expr,  $f:expr) => {
-            let factory : Factory = Box::new(|| Arc::new(Hasher::new($n, $t, Box::new($f))));
+            let factory: Factory = Box::new(|| Arc::new(Hasher::new($n, $t, Box::new($f))));
             by_name.insert($n, factory);
         };
     }
 
-    register!("Blake2s-256", HasherType::Blake2s_256, digest::Blake2s_256_Hasher::new());
-    register!("Blake2d-512", HasherType::Blake2b_512, digest::Blake2b_512_Hasher::new());
-    register!("Blake3", HasherType::Blake3, blake3::Blake3Hasher::new());
-    register!("SHA-2-256", HasherType::Sha2_256, digest::Sha2_256_Hasher::new());
-    register!("SHA-2-512", HasherType::Sha2_512, digest::Sha2_512_Hasher::new());
-    register!("SHA-3-256", HasherType::Sha3_256, digest::Sha3_256_Hasher::new());
-    register!("SHA-3-512", HasherType::Sha3_512, digest::Sha3_512_Hasher::new());
-    register!("Tiger", HasherType::Tiger, digest::TigerHasher::new());
-    register!("Whirlpool", HasherType::Whirlpool, digest::WhirlpoolHasher::new());
+    use HasherType::*;
+
+    register!(
+        "Blake2s-256",
+        Blake2s_256,
+        digest::Blake2s_256_Hasher::new()
+    );
+    register!(
+        "Blake2d-512",
+        Blake2b_512,
+        digest::Blake2b_512_Hasher::new()
+    );
+    register!("Blake3", Blake3, blake3::Blake3Hasher::new());
+    register!("SHA-2-256", Sha2_256, digest::Sha2_256_Hasher::new());
+    register!("SHA-2-512", Sha2_512, digest::Sha2_512_Hasher::new());
+    register!("SHA-3-256", Sha3_256, digest::Sha3_256_Hasher::new());
+    register!("SHA-3-512", Sha3_512, digest::Sha3_512_Hasher::new());
+    register!("Tiger", Tiger, digest::TigerHasher::new());
+    register!("Whirlpool", Whirlpool, digest::WhirlpoolHasher::new());
 
     by_name
 }
-

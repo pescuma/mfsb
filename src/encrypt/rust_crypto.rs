@@ -1,11 +1,12 @@
-use super::*;
 use ::chacha20poly1305::aead::AeadCore;
 use ::chacha20poly1305::aead::KeyInit;
 use ::chacha20poly1305::aead::OsRng;
 use ::chacha20poly1305::AeadInPlace;
 use ::chacha20poly1305::ChaCha20Poly1305;
-use generic_array::typenum::Unsigned;
 use generic_array::GenericArray;
+use generic_array::typenum::Unsigned;
+
+use super::*;
 
 pub struct ChaCha20Poly1305Encryptor {
     pub cipher: ChaCha20Poly1305,
@@ -19,7 +20,7 @@ impl ChaCha20Poly1305Encryptor {
     }
 }
 
-impl Encryptor for ChaCha20Poly1305Encryptor {
+impl EncryptorImpl for ChaCha20Poly1305Encryptor {
     fn get_extra_space_needed(&self) -> u32 {
         <ChaCha20Poly1305 as AeadCore>::TagSize::to_u32()
     }

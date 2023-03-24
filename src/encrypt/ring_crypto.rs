@@ -1,6 +1,7 @@
-use super::*;
 use ::ring::aead;
 use rand::RngCore;
+
+use super::*;
 
 pub struct RingEncryptor {
     algo: &'static aead::Algorithm,
@@ -43,7 +44,7 @@ impl RingEncryptor {
     }
 }
 
-impl Encryptor for RingEncryptor {
+impl EncryptorImpl for RingEncryptor {
     fn get_extra_space_needed(&self) -> u32 {
         self.algo.tag_len() as u32
     }
