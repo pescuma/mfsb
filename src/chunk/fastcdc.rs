@@ -1,6 +1,8 @@
-use super::*;
-use anyhow::{Context, Result};
 use std::fs;
+
+use anyhow::{Context, Result};
+
+use super::*;
 
 pub struct FastCDC2020Mmap {
     block_min: u32,
@@ -18,11 +20,7 @@ impl FastCDC2020Mmap {
     }
 }
 
-impl Chunker for FastCDC2020Mmap {
-    fn get_block_size(&self) -> u32 {
-        self.block_avg
-    }
-
+impl ChunkerImpl for FastCDC2020Mmap {
     fn get_max_block_size(&self) -> u32 {
         self.block_max
     }

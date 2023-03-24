@@ -1,9 +1,10 @@
-use super::*;
-use anyhow::Result;
 use std::fs;
 
+use anyhow::Result;
+
+use super::*;
+
 pub struct ZPAQ {
-    block_size: u32,
     block_max: u32,
     nbits: usize,
 }
@@ -11,18 +12,13 @@ pub struct ZPAQ {
 impl ZPAQ {
     pub fn new(block_size: u32) -> Self {
         ZPAQ {
-            block_size,
             block_max: block_size * 2,
             nbits: (block_size as f32).log2().ceil() as usize,
         }
     }
 }
 
-impl Chunker for ZPAQ {
-    fn get_block_size(&self) -> u32 {
-        self.block_size
-    }
-
+impl ChunkerImpl for ZPAQ {
     fn get_max_block_size(&self) -> u32 {
         self.block_max
     }

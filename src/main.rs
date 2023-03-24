@@ -1,10 +1,12 @@
-use anyhow::Error;
-use mfsb::pack::builder::PackBuilder;
-use mfsb::*;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
+
+use anyhow::Error;
+
+use mfsb::*;
+use mfsb::pack::builder::PackBuilder;
 
 fn main() {
     let root = "C:\\Users\\rdomenecci\\Books";
@@ -117,8 +119,7 @@ fn create_threads(
 
                     let mut chunks = 0;
 
-                    let result = chunk::split(
-                        chunker.as_ref(),
+                    let result = chunker.split(
                         file.get_path(),
                         file.get_metadata().unwrap(),
                         &mut |data| {

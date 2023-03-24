@@ -1,11 +1,12 @@
-use super::*;
-use anyhow::Result;
-use cdc::RollingHash64;
 use std::fs;
 use std::io::Read;
 
+use anyhow::Result;
+use cdc::RollingHash64;
+
+use super::*;
+
 pub struct Rabin {
-    block_size: u32,
     block_min: usize,
     block_max: usize,
     mmap: bool,
@@ -14,7 +15,6 @@ pub struct Rabin {
 impl Rabin {
     pub fn new(block_size: u32, mmap: bool) -> Self {
         Rabin {
-            block_size,
             block_min: (block_size * 9 / 10) as usize,
             block_max: (block_size * 2) as usize,
             mmap,
@@ -94,11 +94,7 @@ impl Rabin {
 }
 
 
-impl Chunker for Rabin {
-    fn get_block_size(&self) -> u32 {
-        self.block_size
-    }
-
+impl ChunkerImpl for Rabin {
     fn get_max_block_size(&self) -> u32 {
         self.block_max as u32
     }

@@ -1,9 +1,11 @@
-use super::*;
-use anyhow::Result;
-use std::io::Read;
 use std::{fs, io};
+use std::io::Read;
+
 use ::hash_roll as hr;
 use ::hash_roll::ChunkIncr;
+use anyhow::Result;
+
+use super::*;
 
 pub struct FastCdc {
     block_min: u64,
@@ -23,11 +25,7 @@ impl FastCdc {
     }
 }
 
-impl Chunker for FastCdc {
-    fn get_block_size(&self) -> u32 {
-        self.block_normal as u32
-    }
-
+impl ChunkerImpl for FastCdc {
     fn get_max_block_size(&self) -> u32 {
         self.block_max as u32
     }
@@ -49,7 +47,6 @@ impl Chunker for FastCdc {
 }
 
 pub struct ZPAQ {
-    block_size: u32,
     block_max: u32,
     bits: u8,
     mmap: bool,
@@ -58,7 +55,6 @@ pub struct ZPAQ {
 impl ZPAQ {
     pub fn new(block_size: u32, mmap: bool) -> Self {
         ZPAQ {
-            block_size,
             block_max: (block_size * 2), // TODO
             bits: (block_size as f32).log2().ceil() as u8,
             mmap,
@@ -66,11 +62,7 @@ impl ZPAQ {
     }
 }
 
-impl Chunker for ZPAQ {
-    fn get_block_size(&self) -> u32 {
-        self.block_size
-    }
-
+impl ChunkerImpl for ZPAQ {
     fn get_max_block_size(&self) -> u32 {
         self.block_max
     }
@@ -102,11 +94,7 @@ impl RollSum {
     }
 }
 
-impl Chunker for RollSum {
-    fn get_block_size(&self) -> u32 {
-        self.block_size
-    }
-
+impl ChunkerImpl for RollSum {
     fn get_max_block_size(&self) -> u32 {
         self.block_max
     }
@@ -138,11 +126,7 @@ impl RAM {
     }
 }
 
-impl Chunker for RAM {
-    fn get_block_size(&self) -> u32 {
-        self.block_size
-    }
-
+impl ChunkerImpl for RAM {
     fn get_max_block_size(&self) -> u32 {
         self.block_max
     }
