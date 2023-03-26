@@ -28,13 +28,13 @@ fn create_snapshot(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
 
 fn create_threads(threads: &mut Vec<thread::JoinHandle<()>>, snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
     let config = pipeline::Config::new();
-    let pack_size: u32 = 20 * 1024 * 1024;
-    let chunks_per_pack = pack_size / config.chunker.get_max_block_size();
+    let chunks_per_pack = config.pack_size / config.chunker.get_block_size();
 
     let (walk_tx, walk_rx) = flume::unbounded();
     let (chunk_tx, chunk_rx) = flume::unbounded();
     let (hash_chunk_tx, hash_chunk_rx) = flume::bounded(chunks_per_pack as usize);
     let (pack_tx, pack_rx) = flume::bounded(0);
+    let (pack_prepare_tx, pack_prepare_rx) = flume::bounded(0);
     let (store_pack_tx, store_pack_rx) = flume::bounded(0);
 
     walk_tx.send(snapshot).unwrap();
@@ -147,44 +147,70 @@ fn create_threads(threads: &mut Vec<thread::JoinHandle<()>>, snapshot: Arc<snaps
 
     threads.push(
         thread::Builder::new()
-            .name(String::from("pack"))
+            .name(String::from("pack create"))
             .spawn({
+                let pack_size = config.pack_size;
                 let pack_capacity =
                     pack_size + config.chunker.get_max_block_size() + config.encryptor.get_extra_space_needed();
-                let hasher = config.hasher.clone();
-                let compressor = config.compressor.clone();
-                let encryptor = config.encryptor.clone();
 
                 let pack_rx = pack_rx.clone();
-                let store_pack_tx = store_pack_tx.clone();
+                let pack_prepare_tx = pack_prepare_tx.clone();
 
                 move || {
+                    let mut now = Instant::now();
                     let mut pack = PackBuilder::new(pack_capacity);
 
                     loop {
+                        let tmp = Instant::now();
                         let (snapshot, file, chunk, data) = recv!(pack_rx);
+                        println!(" >> pack waited to receive: {:.0?}", tmp.elapsed());
 
                         pack.add_chunk(snapshot, file, chunk, data);
 
                         if pack.get_size_chunks() > pack_size {
-                            println!("pack finished: {}", pack.get_size_chunks());
-                            prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
+                            println!("pack finished: {} in: {:.0?}", pack.get_size_chunks(), now.elapsed());
 
-                            store_pack_tx.send(pack).unwrap();
+                            now = Instant::now();
+                            pack_prepare_tx.send(pack).unwrap();
+                            println!(" << pack waited to send: {:.0?}", now.elapsed());
+
+                            now = Instant::now();
                             pack = PackBuilder::new(pack_capacity);
                         }
                     }
 
                     if pack.get_size_chunks() > 0 {
-                        println!("pack finished: {}", pack.get_size_chunks());
-                        prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
-
-                        store_pack_tx.send(pack).unwrap();
+                        println!("pack finished: {} in: {:.0?}", pack.get_size_chunks(), now.elapsed());
+                        pack_prepare_tx.send(pack).unwrap();
                     }
                 }
             })
             .unwrap(),
     );
+
+    for i in 1..=config.prepareThreads {
+        threads.push(
+            thread::Builder::new()
+                .name(format!("pack prepare {}", i))
+                .spawn({
+                    let hasher = config.hasher.clone();
+                    let compressor = config.compressor.clone();
+                    let encryptor = config.encryptor.clone();
+
+                    let pack_prepare_rx = pack_prepare_rx.clone();
+                    let store_pack_tx = store_pack_tx.clone();
+
+                    move || loop {
+                        let mut pack = recv!(pack_prepare_rx);
+
+                        prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
+
+                        store_pack_tx.send(pack).unwrap();
+                    }
+                })
+                .unwrap(),
+        );
+    }
 
     threads.push(
         thread::Builder::new()
@@ -244,6 +270,11 @@ fn prepare(
         }
         Ok(o) => o,
     };
-    pack.set_encrypted_data(encrypted);
-    println!("pack encrypted {}% in: {:.0?}", pack.get_size_encrypt() * 100 / pack.get_size_compress(), now.elapsed());
+    pack.set_encrypted_data(encrypted.0, encrypted.1);
+    println!(
+        "pack encrypted {:?} {}% in: {:.0?}",
+        encrypted.0,
+        pack.get_size_encrypt() * 100 / pack.get_size_compress(),
+        now.elapsed()
+    );
 }

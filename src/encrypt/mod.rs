@@ -16,6 +16,7 @@ pub struct Encryptor {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]
 pub enum EncryptorType {
+    NONE,
     ChaCha20Poly1305_sw,
     ChaCha20Poly1305,
     AES_256_GCM,
@@ -29,8 +30,12 @@ trait EncryptorImpl: Send + Sync {
 }
 
 impl Encryptor {
-    pub fn list_available_names() -> Vec<&'static str> {
-        return REGISTERED.keys().map(|k| *k).collect();
+    pub fn list_available_names(include_none: bool) -> Vec<&'static str> {
+        return REGISTERED
+            .keys()
+            .map(|k| *k)
+            .filter(|k| include_none || *k != "None")
+            .collect();
     }
 
     pub fn build_by_name(name: &str, password: &str) -> Result<Arc<Encryptor>> {
@@ -74,8 +79,9 @@ impl Encryptor {
         self.inner.get_extra_space_needed()
     }
 
-    pub fn encrypt(&self, data: Vec<u8>) -> Result<Vec<u8>> {
-        self.inner.encrypt(data)
+    pub fn encrypt(&self, data: Vec<u8>) -> Result<(EncryptorType, Vec<u8>)> {
+        let result = self.inner.encrypt(data)?;
+        Ok((self.et, result))
     }
 
     pub fn decrypt(&self, data: Vec<u8>) -> Result<Vec<u8>> {
@@ -101,10 +107,33 @@ fn create_encryptors() -> HashMap<&'static str, Factory> {
 
     use EncryptorType::*;
 
+    register!("None", NONE, |_| NoneEncryptor::new());
     register!("ChaCha20Poly1305 (sw)", ChaCha20Poly1305_sw, |key| rust_crypto::ChaCha20Poly1305Encryptor::new(key));
     register!("ChaCha20Poly1305", ChaCha20Poly1305, |key| ring_crypto::RingEncryptor::new_chacha20_poly1305(key));
     register!("AES 256 GCM", AES_256_GCM, |key| ring_crypto::RingEncryptor::new_aes_256_gcm(key));
     register!("AES 128 GCM", AES_128_GCM, |key| ring_crypto::RingEncryptor::new_aes_128_gcm(key));
 
     by_name
+}
+
+struct NoneEncryptor {}
+
+impl NoneEncryptor {
+    fn new() -> NoneEncryptor {
+        Self {}
+    }
+}
+
+impl EncryptorImpl for NoneEncryptor {
+    fn get_extra_space_needed(&self) -> u32 {
+        0
+    }
+
+    fn encrypt(&self, data: Vec<u8>) -> Result<Vec<u8>> {
+        Ok(data)
+    }
+
+    fn decrypt(&self, data: Vec<u8>) -> Result<Vec<u8>> {
+        Ok(data)
+    }
 }

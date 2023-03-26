@@ -31,6 +31,7 @@ pub struct Compressor {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CompressionType {
+    NONE,
     SNAPPY,
     ZSTD,
     DEFLATE,
@@ -47,8 +48,13 @@ trait CompressorImpl: Send + Sync {
 }
 
 impl Compressor {
-    pub fn list_available_names() -> Vec<&'static str> {
-        return REGISTERED.0.keys().map(|k| *k).collect();
+    pub fn list_available_names(include_none: bool) -> Vec<&'static str> {
+        return REGISTERED
+            .0
+            .keys()
+            .map(|k| *k)
+            .filter(|k| include_none || *k != "None")
+            .collect();
     }
 
     pub fn build_by_name(name: &str) -> Result<Arc<Compressor>> {
@@ -81,13 +87,17 @@ impl Compressor {
         self.ct
     }
 
-    pub fn compress(&self, data: Vec<u8>) -> Result<(Option<CompressionType>, Vec<u8>)> {
+    pub fn compress(&self, data: Vec<u8>) -> Result<(CompressionType, Vec<u8>)> {
+        if self.ct == CompressionType::NONE {
+            return Ok((CompressionType::NONE, data));
+        }
+
         let result = self.inner.compress(&data)?;
 
         if result.len() < data.len() {
-            Ok((Some(self.ct), result))
+            Ok((self.ct, result))
         } else {
-            Ok((None, data))
+            Ok((CompressionType::NONE, data))
         }
     }
 }
@@ -113,6 +123,7 @@ fn create_compressors() -> (HashMap<&'static str, Arc<Compressor>>, HashMap<Comp
 
     use CompressionType::*;
 
+    register!("None", NONE, NoneCompressor::new());
     register!("Snappy", SNAPPY, SnappyCompressor::new());
     register!("zstd-default", ZSTD, ZstdCompressor::new(3));
     register!("zstd-fastest", ZSTD, ZstdCompressor::new(1));
@@ -138,4 +149,18 @@ fn create_compressors() -> (HashMap<&'static str, Arc<Compressor>>, HashMap<Comp
     register!("LZ4", LZ4, LZ4Compressor::new());
 
     (by_name, by_type)
+}
+
+struct NoneCompressor {}
+
+impl NoneCompressor {
+    fn new() -> NoneCompressor {
+        Self {}
+    }
+}
+
+impl CompressorImpl for NoneCompressor {
+    fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
+        Ok(Vec::from(data))
+    }
 }

@@ -4,6 +4,7 @@ use std::time::Instant;
 use anyhow::Error;
 
 use crate::compress::CompressionType;
+use crate::encrypt::EncryptorType;
 use crate::snapshot::builder::{ChunkBuilder, PathBuilder, SnapshotBuilder};
 
 pub struct PackBuilder {
@@ -13,6 +14,7 @@ pub struct PackBuilder {
     chunks_size: u32,
     compress_type: Option<CompressionType>,
     compress_size: u32,
+    encrypt_type: Option<EncryptorType>,
     encrypt_size: u32,
     ecc_size: u32,
     error: Mutex<Option<Error>>,
@@ -26,8 +28,9 @@ impl PackBuilder {
             data: Some(Vec::with_capacity(pack_capacity as usize)),
             hash: Vec::new(),
             chunks_size: 0,
-            compress_size: 0,
             compress_type: None,
+            compress_size: 0,
+            encrypt_type: None,
             encrypt_size: 0,
             ecc_size: 0,
             error: Mutex::new(None),
@@ -75,13 +78,14 @@ impl PackBuilder {
         self.hash = hash;
     }
 
-    pub fn set_compressed_data(&mut self, ct: Option<CompressionType>, data: Vec<u8>) {
-        self.compress_type = ct;
+    pub fn set_compressed_data(&mut self, ct: CompressionType, data: Vec<u8>) {
+        self.compress_type = Some(ct);
         self.compress_size = data.len() as u32;
         self.data = Some(data);
     }
 
-    pub fn set_encrypted_data(&mut self, data: Vec<u8>) {
+    pub fn set_encrypted_data(&mut self, et: EncryptorType, data: Vec<u8>) {
+        self.encrypt_type = Some(et);
         self.encrypt_size = data.len() as u32;
         self.data = Some(data);
     }
