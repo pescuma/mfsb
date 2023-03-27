@@ -23,7 +23,7 @@ impl Config {
             pack_size: 20 * 1024 * 1024,
             hasher: hash::Hasher::build_by_name("Blake3").unwrap(),
             chunker: chunk::Chunker::build_by_name("Rabin64 (mmap)", 1 * 1024 * 1024).unwrap(),
-            prepare_threads: threads,
+            prepare_threads: 1,
             compressor: compress::Compressor::build_by_name("Snappy").unwrap(),
             encryptor: encrypt::Encryptor::build_by_name("ChaCha20Poly1305", "1234").unwrap(),
         }

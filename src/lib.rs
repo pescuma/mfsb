@@ -7,6 +7,7 @@ pub mod chunk;
 pub mod compress;
 pub mod encrypt;
 pub mod hash;
+mod metrics;
 pub mod pack;
 pub mod path_walk;
 pub mod pipeline;

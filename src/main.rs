@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Instant;
 
 use anyhow::Error;
 
@@ -31,9 +30,10 @@ fn create_threads(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
     let (store_pack_tx, store_pack_rx) = flume::bounded(0);
     let (index_tx, index_rx) = flume::bounded(0);
 
-    walk_tx.send(snapshot).unwrap();
-
     let monitor = pipeline::monitor::PipelineMonitor::new();
+
+    walk_tx.send(snapshot).unwrap();
+    drop(walk_tx);
 
     macro_rules! recv {
         ($e:expr) => {
@@ -46,10 +46,8 @@ fn create_threads(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
 
     monitor
         .create_step("Walk", &walk_rx, &chunk_tx)
-        .spawn_thread(|ctx| loop {
+        .spawn_thread(|mut ctx| loop {
             let snapshot = recv!(ctx);
-
-            let now = Instant::now();
 
             let mut count = 0;
 
@@ -75,18 +73,16 @@ fn create_threads(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
                 count += 1;
             });
 
-            println!("path walk of {} items in: {:.0?}", count, now.elapsed());
-
             match result {
                 Err(e) => snapshot.set_error(e),
                 Ok(_) => snapshot.set_finished_adding_paths(count),
-            }
+            };
         });
 
     monitor.create_step("Chunk", &chunk_rx, &hash_chunk_tx).spawn_thread({
         let chunker = config.chunker.clone();
 
-        move |ctx| loop {
+        move |mut ctx| loop {
             let (snapshot, file) = recv!(ctx);
 
             let mut chunks = 0;
@@ -108,7 +104,7 @@ fn create_threads(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
         .spawn_thread({
             let hasher = config.hasher.clone();
 
-            move |ctx| loop {
+            move |mut ctx| loop {
                 let (snapshot, path, chunk, data) = recv!(ctx);
 
                 let hash = hasher.hash(&data);
@@ -122,7 +118,7 @@ fn create_threads(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
         let pack_size = config.pack_size;
         let pack_capacity = pack_size + config.chunker.get_max_block_size() + config.encryptor.get_extra_space_needed();
 
-        move |ctx| {
+        move |mut ctx| {
             let mut pack = PackBuilder::new(pack_capacity);
 
             loop {
@@ -151,7 +147,7 @@ fn create_threads(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
                 let compressor = config.compressor.clone();
                 let encryptor = config.encryptor.clone();
 
-                move |ctx| loop {
+                move |mut ctx| loop {
                     let mut pack = recv!(ctx);
 
                     prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
@@ -164,24 +160,20 @@ fn create_threads(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
 
     monitor
         .create_step("Store pack", &store_pack_rx, &index_tx)
-        .spawn_thread({
-            move |ctx| loop {
-                let mut pack = recv!(ctx);
+        .spawn_thread(move |mut ctx| loop {
+            let mut pack = recv!(ctx);
 
-                if let Some(e) = pack.take_error() {
-                    for (_, file, chunk, _, _) in pack.chunks {
-                        file.set_error(Error::msg(format!(
-                            "error creating pack with chunk {}: {}",
-                            chunk.get_index(),
-                            e
-                        )));
-                    }
-                    continue;
+            if let Some(e) = pack.take_error() {
+                for (_, file, chunk, _, _) in pack.chunks {
+                    file.set_error(Error::msg(format!("error creating pack with chunk {}: {}", chunk.get_index(), e)));
                 }
-
-                ctx.send(pack);
+                continue;
             }
+
+            ctx.send(pack);
         });
+
+    for _ in index_rx {}
 
     monitor.join_threads();
 }
@@ -195,7 +187,7 @@ fn prepare(
     let hash = hasher.hash(pack.get_data());
     pack.set_hash(hash);
 
-    let now = Instant::now();
+    // let now = Instant::now();
     let compressed = match compressor.compress(pack.take_data()) {
         Err(e) => {
             pack.set_error(e);
@@ -204,14 +196,14 @@ fn prepare(
         Ok(o) => o,
     };
     pack.set_compressed_data(compressed.0, compressed.1);
-    println!(
-        "pack compressed? {:?} {}% in: {:.0?}",
-        compressed.0,
-        pack.get_size_compress() * 100 / pack.get_size_chunks(),
-        now.elapsed()
-    );
+    // println!(
+    //     "pack compressed? {:?} {}% in: {:.0?}",
+    //     compressed.0,
+    //     pack.get_size_compress() * 100 / pack.get_size_chunks(),
+    //     now.elapsed()
+    // );
 
-    let now = Instant::now();
+    // let now = Instant::now();
     let encrypted = match encryptor.encrypt(pack.take_data()) {
         Err(e) => {
             pack.set_error(e);
@@ -220,10 +212,10 @@ fn prepare(
         Ok(o) => o,
     };
     pack.set_encrypted_data(encrypted.0, encrypted.1);
-    println!(
-        "pack encrypted {:?} {}% in: {:.0?}",
-        encrypted.0,
-        pack.get_size_encrypt() * 100 / pack.get_size_compress(),
-        now.elapsed()
-    );
+    // println!(
+    //     "pack encrypted {:?} {}% in: {:.0?}",
+    //     encrypted.0,
+    //     pack.get_size_encrypt() * 100 / pack.get_size_compress(),
+    //     now.elapsed()
+    // );
 }
