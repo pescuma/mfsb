@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::thread;
 use std::time::Instant;
 
 use anyhow::Error;
@@ -15,18 +14,12 @@ fn main() {
 }
 
 fn create_snapshot(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
-    let mut threads = Vec::new();
-
-    create_threads(&mut threads, snapshot.clone());
-
-    for thread in threads {
-        thread.join().unwrap();
-    }
+    create_threads(snapshot.clone());
 
     assert_eq!(snapshot.is_complete(), true);
 }
 
-fn create_threads(threads: &mut Vec<thread::JoinHandle<()>>, snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
+fn create_threads(snapshot: Arc<snapshot::builder::SnapshotBuilder>) {
     let config = pipeline::Config::new();
     let chunks_per_pack = config.pack_size / config.chunker.get_block_size();
 
@@ -36,8 +29,11 @@ fn create_threads(threads: &mut Vec<thread::JoinHandle<()>>, snapshot: Arc<snaps
     let (pack_tx, pack_rx) = flume::bounded(0);
     let (pack_prepare_tx, pack_prepare_rx) = flume::bounded(0);
     let (store_pack_tx, store_pack_rx) = flume::bounded(0);
+    let (index_tx, index_rx) = flume::bounded(0);
 
     walk_tx.send(snapshot).unwrap();
+
+    let monitor = pipeline::monitor::PipelineMonitor::new();
 
     macro_rules! recv {
         ($e:expr) => {
@@ -48,193 +44,146 @@ fn create_threads(threads: &mut Vec<thread::JoinHandle<()>>, snapshot: Arc<snaps
         };
     }
 
-    threads.push(
-        thread::Builder::new()
-            .name(String::from("walk"))
-            .spawn({
-                let walk_rx = walk_rx.clone();
-                let chunk_tx = chunk_tx.clone();
+    monitor
+        .create_step("Walk", &walk_rx, &chunk_tx)
+        .spawn_thread(|ctx| loop {
+            let snapshot = recv!(ctx);
 
-                move || loop {
-                    let snapshot = recv!(walk_rx);
+            let now = Instant::now();
 
-                    let now = Instant::now();
+            let mut count = 0;
 
-                    let mut count = 0;
-
-                    let result =
-                        path_walk::path_walk(snapshot.get_root().to_path_buf(), |path, relative_path, metadata| {
-                            match metadata {
-                                Err(err) => {
-                                    let path = snapshot.add_path(path, relative_path, None);
-                                    path.set_error(err.into());
-                                }
-                                Ok(metadata) => {
-                                    let len = if metadata.is_file() { metadata.len() } else { 0 };
-
-                                    let path = snapshot.add_path(path, relative_path, Some(metadata));
-
-                                    if len == 0 {
-                                        path.set_finished_adding_chunks(0);
-                                    } else {
-                                        chunk_tx.send((snapshot.clone(), path)).unwrap();
-                                    }
-                                }
-                            }
-
-                            count += 1;
-                        });
-
-                    println!("path walk of {} items in: {:.0?}", count, now.elapsed());
-
-                    match result {
-                        Err(e) => snapshot.set_error(e),
-                        Ok(_) => snapshot.set_finished_adding_paths(count),
+            let result = path_walk::path_walk(snapshot.get_root().to_path_buf(), |path, relative_path, metadata| {
+                match metadata {
+                    Err(err) => {
+                        let path = snapshot.add_path(path, relative_path, None);
+                        path.set_error(err.into());
                     }
-                }
-            })
-            .unwrap(),
-    );
+                    Ok(metadata) => {
+                        let len = if metadata.is_file() { metadata.len() } else { 0 };
 
-    threads.push(
-        thread::Builder::new()
-            .name(String::from("chunk"))
-            .spawn({
-                let chunker = config.chunker.clone();
-                let chunk_rx = chunk_rx.clone();
-                let hash_chunk_tx = hash_chunk_tx.clone();
+                        let path = snapshot.add_path(path, relative_path, Some(metadata));
 
-                move || loop {
-                    let (snapshot, file) = recv!(chunk_rx);
-
-                    let mut chunks = 0;
-
-                    let result = chunker.split(file.get_path(), file.get_metadata().unwrap(), &mut |data| {
-                        let chunk = file.add_chunk(data.len() as u32);
-                        hash_chunk_tx
-                            .send((snapshot.clone(), file.clone(), chunk, data))
-                            .unwrap();
-                        chunks += 1;
-                    });
-                    match result {
-                        Err(e) => file.set_error(e),
-                        Ok(_) => file.set_finished_adding_chunks(chunks),
-                    }
-                }
-            })
-            .unwrap(),
-    );
-
-    threads.push(
-        thread::Builder::new()
-            .name(String::from("hash chunk"))
-            .spawn({
-                let hasher = config.hasher.clone();
-                let hash_chunk_rx = hash_chunk_rx.clone();
-                let pack_tx = pack_tx.clone();
-
-                move || loop {
-                    let (snapshot, path, chunk, data) = recv!(hash_chunk_rx);
-
-                    let hash = hasher.hash(&data);
-                    chunk.set_hash(hash);
-
-                    pack_tx.send((snapshot, path, chunk, data)).unwrap();
-                }
-            })
-            .unwrap(),
-    );
-
-    threads.push(
-        thread::Builder::new()
-            .name(String::from("pack create"))
-            .spawn({
-                let pack_size = config.pack_size;
-                let pack_capacity =
-                    pack_size + config.chunker.get_max_block_size() + config.encryptor.get_extra_space_needed();
-
-                let pack_rx = pack_rx.clone();
-                let pack_prepare_tx = pack_prepare_tx.clone();
-
-                move || {
-                    let mut now = Instant::now();
-                    let mut pack = PackBuilder::new(pack_capacity);
-
-                    loop {
-                        let tmp = Instant::now();
-                        let (snapshot, file, chunk, data) = recv!(pack_rx);
-                        println!(" >> pack waited to receive: {:.0?}", tmp.elapsed());
-
-                        pack.add_chunk(snapshot, file, chunk, data);
-
-                        if pack.get_size_chunks() > pack_size {
-                            println!("pack finished: {} in: {:.0?}", pack.get_size_chunks(), now.elapsed());
-
-                            now = Instant::now();
-                            pack_prepare_tx.send(pack).unwrap();
-                            println!(" << pack waited to send: {:.0?}", now.elapsed());
-
-                            now = Instant::now();
-                            pack = PackBuilder::new(pack_capacity);
+                        if len == 0 {
+                            path.set_finished_adding_chunks(0);
+                        } else {
+                            ctx.send((snapshot.clone(), path));
                         }
                     }
-
-                    if pack.get_size_chunks() > 0 {
-                        println!("pack finished: {} in: {:.0?}", pack.get_size_chunks(), now.elapsed());
-                        pack_prepare_tx.send(pack).unwrap();
-                    }
                 }
-            })
-            .unwrap(),
-    );
 
-    for i in 1..=config.prepareThreads {
-        threads.push(
-            thread::Builder::new()
-                .name(format!("pack prepare {}", i))
-                .spawn({
-                    let hasher = config.hasher.clone();
-                    let compressor = config.compressor.clone();
-                    let encryptor = config.encryptor.clone();
+                count += 1;
+            });
 
-                    let pack_prepare_rx = pack_prepare_rx.clone();
-                    let store_pack_tx = store_pack_tx.clone();
+            println!("path walk of {} items in: {:.0?}", count, now.elapsed());
 
-                    move || loop {
-                        let mut pack = recv!(pack_prepare_rx);
+            match result {
+                Err(e) => snapshot.set_error(e),
+                Ok(_) => snapshot.set_finished_adding_paths(count),
+            }
+        });
 
-                        prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
+    monitor.create_step("Chunk", &chunk_rx, &hash_chunk_tx).spawn_thread({
+        let chunker = config.chunker.clone();
 
-                        store_pack_tx.send(pack).unwrap();
-                    }
-                })
-                .unwrap(),
-        );
+        move |ctx| loop {
+            let (snapshot, file) = recv!(ctx);
+
+            let mut chunks = 0;
+
+            let result = chunker.split(file.get_path(), file.get_metadata().unwrap(), &mut |data| {
+                let chunk = file.add_chunk(data.len() as u32);
+                ctx.send((snapshot.clone(), file.clone(), chunk, data));
+                chunks += 1;
+            });
+            match result {
+                Err(e) => file.set_error(e),
+                Ok(_) => file.set_finished_adding_chunks(chunks),
+            }
+        }
+    });
+
+    monitor
+        .create_step("Hash chunk", &hash_chunk_rx, &pack_tx)
+        .spawn_thread({
+            let hasher = config.hasher.clone();
+
+            move |ctx| loop {
+                let (snapshot, path, chunk, data) = recv!(ctx);
+
+                let hash = hasher.hash(&data);
+                chunk.set_hash(hash);
+
+                ctx.send((snapshot, path, chunk, data));
+            }
+        });
+
+    monitor.create_step("Pack", &pack_rx, &pack_prepare_tx).spawn_thread({
+        let pack_size = config.pack_size;
+        let pack_capacity = pack_size + config.chunker.get_max_block_size() + config.encryptor.get_extra_space_needed();
+
+        move |ctx| {
+            let mut pack = PackBuilder::new(pack_capacity);
+
+            loop {
+                let (snapshot, file, chunk, data) = recv!(ctx);
+
+                pack.add_chunk(snapshot, file, chunk, data);
+
+                if pack.get_size_chunks() > pack_size {
+                    ctx.send(pack);
+                    pack = PackBuilder::new(pack_capacity);
+                }
+            }
+
+            if pack.get_size_chunks() > 0 {
+                ctx.send(pack);
+            }
+        }
+    });
+
+    {
+        let mut step = monitor.create_step("Prepare pack", &pack_prepare_rx, &store_pack_tx);
+
+        for _ in 1..=config.prepare_threads {
+            step.spawn_thread({
+                let hasher = config.hasher.clone();
+                let compressor = config.compressor.clone();
+                let encryptor = config.encryptor.clone();
+
+                move |ctx| loop {
+                    let mut pack = recv!(ctx);
+
+                    prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
+
+                    ctx.send(pack);
+                }
+            });
+        }
     }
 
-    threads.push(
-        thread::Builder::new()
-            .name(String::from("store pack"))
-            .spawn({
-                let store_pack_rx = store_pack_rx.clone();
+    monitor
+        .create_step("Store pack", &store_pack_rx, &index_tx)
+        .spawn_thread({
+            move |ctx| loop {
+                let mut pack = recv!(ctx);
 
-                move || loop {
-                    let mut pack = recv!(store_pack_rx);
-
-                    if let Some(e) = pack.take_error() {
-                        for (_, file, chunk, _, _) in pack.chunks {
-                            file.set_error(Error::msg(format!(
-                                "error creating pack with chunk {}: {}",
-                                chunk.get_index(),
-                                e
-                            )));
-                        }
-                        continue;
+                if let Some(e) = pack.take_error() {
+                    for (_, file, chunk, _, _) in pack.chunks {
+                        file.set_error(Error::msg(format!(
+                            "error creating pack with chunk {}: {}",
+                            chunk.get_index(),
+                            e
+                        )));
                     }
+                    continue;
                 }
-            })
-            .unwrap(),
-    );
+
+                ctx.send(pack);
+            }
+        });
+
+    monitor.join_threads();
 }
 
 fn prepare(

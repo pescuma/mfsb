@@ -2,8 +2,6 @@ use std::io::{self, Read, Write};
 
 use brotlic::{BrotliEncoderOptions, CompressorWriter, DecompressorReader, Quality};
 
-use crate::pack;
-
 use super::*;
 
 pub struct BrotliCompressor {

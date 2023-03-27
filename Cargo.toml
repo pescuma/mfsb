@@ -20,6 +20,7 @@ fastcdc = "3.0.1"
 flume = "0.10.14"
 generic-array = "0.14.6"
 hash-roll = "0.3.0"
+indicatif = { version = "0.17.3", features = ["improved_unicode"] }
 keyring = "2.0.1"
 lazy_static = "1.4.0"
 libdeflater = "0.12.0"
