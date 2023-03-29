@@ -189,6 +189,10 @@ where
 
         self.progress.on_after_send();
     }
+
+    pub fn on_completed(&mut self) {
+        self.progress.on_completed();
+    }
 }
 
 const UPDATE_PROGRESS_FREQUENCY: Duration = Duration::from_millis(300);
@@ -234,8 +238,7 @@ impl PipelineStepProgress {
     }
 
     fn on_before_send(&mut self) {
-        self.process_time.stop_and_record();
-        self.update_progress();
+        self.process_time.pause();
         self.send_time.start();
     }
 
@@ -243,6 +246,11 @@ impl PipelineStepProgress {
         self.send_time.stop_and_record();
         self.update_progress();
         self.process_time.start();
+    }
+
+    fn on_completed(&mut self) {
+        self.process_time.stop_and_record();
+        self.update_progress();
     }
 
     fn update_progress(&self) {

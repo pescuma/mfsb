@@ -5,6 +5,7 @@ use anyhow::Error;
 
 use crate::compress::CompressionType;
 use crate::encrypt::EncryptorType;
+use crate::hash::Hasher;
 use crate::snapshot::builder::{ChunkBuilder, PathBuilder, SnapshotBuilder};
 
 pub struct PackBuilder {
