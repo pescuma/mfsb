@@ -1,7 +1,7 @@
 use std::cmp::max;
 use std::sync::Arc;
 
-use crate::{chunk, compress, encrypt, hash};
+use crate::{chunk, compress, ecc, encrypt, hash};
 
 pub mod monitor;
 
@@ -12,6 +12,7 @@ pub struct Config {
     pub prepare_threads: i8,
     pub compressor: Arc<compress::Compressor>,
     pub encryptor: Arc<encrypt::Encryptor>,
+    pub ecc: Arc<ecc::ECC>,
 }
 
 impl Config {
@@ -26,6 +27,7 @@ impl Config {
             prepare_threads: threads,
             compressor: compress::Compressor::build_by_name("Snappy").unwrap(),
             encryptor: encrypt::Encryptor::build_by_name("ChaCha20Poly1305", "1234").unwrap(),
+            ecc: ecc::ECC::build_by_name("SECDED").unwrap(),
         }
     }
 }

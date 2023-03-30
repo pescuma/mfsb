@@ -5,10 +5,12 @@ use anyhow::Error;
 use anyhow::Result;
 use flume::{Receiver, Sender};
 
+use mfsb::ecc::ECC;
 use mfsb::pack::builder::PackBuilder;
 use mfsb::path_walk::path_walk;
 use mfsb::snapshot::builder::SnapshotBuilder;
 use mfsb::*;
+use mfsb::{compress, encrypt, hash};
 
 fn main() {
     let root = "C:\\Users\\rdomenecci\\Books";
@@ -149,11 +151,13 @@ fn create_threads(
                 let hasher = config.hasher.clone();
                 let compressor = config.compressor.clone();
                 let encryptor = config.encryptor.clone();
+                let ecc = config.ecc.clone();
 
                 move |mut ctx| loop {
                     let mut pack = recv!(ctx);
 
-                    let result = prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref());
+                    let result =
+                        prepare(&mut pack, hasher.as_ref(), compressor.as_ref(), encryptor.as_ref(), ecc.as_ref());
                     match result {
                         Err(e) => pack.set_error(e),
                         Ok(_) => ctx.send(pack),
@@ -187,6 +191,7 @@ fn prepare(
     hasher: &hash::Hasher,
     compressor: &compress::Compressor,
     encryptor: &encrypt::Encryptor,
+    ecc: &ECC,
 ) -> Result<()> {
     let hash = hasher.hash(pack.get_data());
     pack.set_hash(hash);
@@ -196,6 +201,9 @@ fn prepare(
 
     let encrypted = encryptor.encrypt(pack.take_data())?;
     pack.set_encrypted_data(encrypted.0, encrypted.1);
+
+    let after_ecc = ecc.write(pack.take_data())?;
+    pack.set_ecc_data(after_ecc.0, after_ecc.1);
 
     Ok(())
 }

@@ -4,8 +4,8 @@ use std::time::Instant;
 use anyhow::Error;
 
 use crate::compress::CompressionType;
+use crate::ecc::ECCType;
 use crate::encrypt::EncryptorType;
-use crate::hash::Hasher;
 use crate::snapshot::builder::{ChunkBuilder, PathBuilder, SnapshotBuilder};
 
 pub struct PackBuilder {
@@ -17,6 +17,7 @@ pub struct PackBuilder {
     compress_size: u32,
     encrypt_type: Option<EncryptorType>,
     encrypt_size: u32,
+    ecc_type: Option<ECCType>,
     ecc_size: u32,
     error: Mutex<Option<Error>>,
     start: Instant,
@@ -33,6 +34,7 @@ impl PackBuilder {
             compress_size: 0,
             encrypt_type: None,
             encrypt_size: 0,
+            ecc_type: None,
             ecc_size: 0,
             error: Mutex::new(None),
             start: Instant::now(),
@@ -88,6 +90,12 @@ impl PackBuilder {
     pub fn set_encrypted_data(&mut self, et: EncryptorType, data: Vec<u8>) {
         self.encrypt_type = Some(et);
         self.encrypt_size = data.len() as u32;
+        self.data = Some(data);
+    }
+
+    pub fn set_ecc_data(&mut self, et: ECCType, data: Vec<u8>) {
+        self.ecc_type = Some(et);
+        self.ecc_size = data.len() as u32;
         self.data = Some(data);
     }
 

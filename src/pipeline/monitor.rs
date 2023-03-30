@@ -269,8 +269,6 @@ impl PipelineStepProgress {
     }
 
     fn force_update_progress(&self) {
-        let s = self.clock.raw();
-
         if self.recv_time.is_empty() {
             return;
         }
