@@ -576,9 +576,9 @@ checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
 name = "fastcdc"
-version = "3.0.2"
+version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ef4ee6b697e7bbdf002ba496c5efdb899729cb83cc6adc7ef9a776e4d040b5d"
+checksum = "10010f9b2e601acfda445cb35385cf4241fce85c6e1ea702b157c39f79f8787a"
 
 [[package]]
 name = "fastrand"
