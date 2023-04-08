@@ -13,3 +13,4 @@ pub mod pack;
 pub mod path_walk;
 pub mod pipeline;
 pub mod snapshot;
+pub mod workspace;

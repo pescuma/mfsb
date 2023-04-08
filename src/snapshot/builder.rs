@@ -4,12 +4,14 @@ use std::sync::{atomic, Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::Error;
+use anyhow::Result;
 use relative_path::{RelativePath, RelativePathBuf};
 
 use crate::pack::location::PackLocation;
+use crate::workspace::SharedFolder;
 
 pub struct SnapshotBuilder {
-    root: PathBuf,
+    root: Arc<SharedFolder>,
     paths: Mutex<Vec<Arc<PathBuilder>>>,
     paths_count: atomic::AtomicI32,
     error: Mutex<Option<Error>>,
@@ -17,7 +19,7 @@ pub struct SnapshotBuilder {
 }
 
 impl SnapshotBuilder {
-    pub fn new(root: PathBuf) -> Arc<SnapshotBuilder> {
+    pub fn new(root: Arc<SharedFolder>) -> Arc<SnapshotBuilder> {
         Arc::new(SnapshotBuilder {
             root,
             paths: Mutex::new(Vec::new()),
@@ -28,7 +30,7 @@ impl SnapshotBuilder {
     }
 
     pub fn get_root(&self) -> &Path {
-        &self.root
+        &self.root.path
     }
 
     pub fn add_path(
@@ -41,13 +43,14 @@ impl SnapshotBuilder {
 
         self.paths.lock().unwrap().push(result.clone());
 
-        return result;
+        result
     }
 
     pub fn set_finished_adding_paths(&self, path_count: u32) {
         assert_eq!(path_count, self.paths.lock().unwrap().len() as u32);
 
-        self.paths_count.store(path_count as i32, atomic::Ordering::SeqCst);
+        self.paths_count
+            .store(path_count as i32, atomic::Ordering::SeqCst);
     }
 
     pub fn set_error(&self, err: Error) {
@@ -112,7 +115,8 @@ impl PathBuilder {
     pub fn set_finished_adding_chunks(&self, chunk_count: u32) {
         assert_eq!(chunk_count, self.chunks.lock().unwrap().len() as u32);
 
-        self.chunk_count.store(chunk_count as i32, atomic::Ordering::SeqCst);
+        self.chunk_count
+            .store(chunk_count as i32, atomic::Ordering::SeqCst);
     }
 
     pub fn set_error(&self, err: Error) {

@@ -110,57 +110,61 @@ fn create_threads(
             ctx.on_completed();
         });
 
-    monitor.create_step("Chunk", &chunk_rx, &pack_tx).spawn_thread({
-        let chunker = chunker.clone();
+    monitor
+        .create_step("Chunk", &chunk_rx, &pack_tx)
+        .spawn_thread({
+            let chunker = chunker.clone();
 
-        move |mut ctx| loop {
-            let (snapshot, file) = recv!(ctx);
+            move |mut ctx| loop {
+                let (snapshot, file) = recv!(ctx);
 
-            let mut chunks = 0;
+                let mut chunks = 0;
 
-            let result = chunker.split(file.get_path(), file.get_metadata().unwrap(), &mut |data| {
-                let chunk = file.add_chunk(data.len() as u32);
-                ctx.send((snapshot.clone(), file.clone(), chunk, data));
-                chunks += 1;
-            });
-            match result {
-                Err(e) => file.set_error(e),
-                Ok(_) => file.set_finished_adding_chunks(chunks),
-            }
-
-            ctx.on_completed();
-        }
-    });
-
-    monitor.create_step("Pack", &pack_rx, &pack_prepare_tx).spawn_thread({
-        let pack_capacity = pack_size + chunker.get_max_block_size() + encryptor.get_extra_space_needed();
-        let hasher = hasher.clone();
-
-        move |mut ctx| {
-            let mut pack = PackBuilder::new(pack_capacity);
-
-            loop {
-                let (snapshot, file, chunk, data) = recv!(ctx);
-
-                let hash = hasher.hash(&data);
-                chunk.set_hash(hash);
-
-                pack.add_chunk(snapshot, file, chunk, data);
-
-                if pack.get_size_chunks() > pack_size {
-                    ctx.send(pack);
-                    ctx.on_completed();
-
-                    pack = PackBuilder::new(pack_capacity);
+                let result = chunker.split(file.get_path(), file.get_metadata().unwrap(), &mut |data| {
+                    let chunk = file.add_chunk(data.len() as u32);
+                    ctx.send((snapshot.clone(), file.clone(), chunk, data));
+                    chunks += 1;
+                });
+                match result {
+                    Err(e) => file.set_error(e),
+                    Ok(_) => file.set_finished_adding_chunks(chunks),
                 }
-            }
 
-            if pack.get_size_chunks() > 0 {
-                ctx.send(pack);
                 ctx.on_completed();
             }
-        }
-    });
+        });
+
+    monitor
+        .create_step("Pack", &pack_rx, &pack_prepare_tx)
+        .spawn_thread({
+            let pack_capacity = pack_size + chunker.get_max_block_size() + encryptor.get_extra_space_needed();
+            let hasher = hasher.clone();
+
+            move |mut ctx| {
+                let mut pack = PackBuilder::new(pack_capacity);
+
+                loop {
+                    let (snapshot, file, chunk, data) = recv!(ctx);
+
+                    let hash = hasher.hash(&data);
+                    chunk.set_hash(hash);
+
+                    pack.add_chunk(snapshot, file, chunk, data);
+
+                    if pack.get_size_chunks() > pack_size {
+                        ctx.send(pack);
+                        ctx.on_completed();
+
+                        pack = PackBuilder::new(pack_capacity);
+                    }
+                }
+
+                if pack.get_size_chunks() > 0 {
+                    ctx.send(pack);
+                    ctx.on_completed();
+                }
+            }
+        });
 
     {
         let mut step = monitor.create_step("Prepare pack", &pack_prepare_rx, &store_pack_tx);

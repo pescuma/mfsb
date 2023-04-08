@@ -1,21 +1,23 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Error;
-use anyhow::Result;
+use anyhow::{Error, Result};
 use flume::{Receiver, Sender};
 
-use mfsb::ecc::ECC;
-use mfsb::pack::builder::PackBuilder;
-use mfsb::path_walk::path_walk;
 use mfsb::snapshot::builder::SnapshotBuilder;
 use mfsb::*;
-use mfsb::{compress, encrypt, hash};
 
-fn main() {
-    let root = "C:\\Users\\rdomenecci\\Books";
-    let snapshot = SnapshotBuilder::new(PathBuf::from(root));
+fn main() -> Result<()> {
+    let mut ws = workspace::Workspace::build()?;
+
+    let root = PathBuf::from("C:\\Users\\rdomenecci\\Books");
+
+    let folder = ws.get_folder(&root)?;
+
+    let snapshot = SnapshotBuilder::new(folder);
     create_snapshot(snapshot);
+
+    Ok(())
 }
 
 fn create_snapshot(snapshot: Arc<SnapshotBuilder>) {
