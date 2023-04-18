@@ -30,5 +30,5 @@ fn create_snapshot(snapshot: Arc<SnapshotBuilder>) {
 
     pipeline.join_threads();
 
-    assert_eq!(snapshot.is_complete(), true);
+    assert!(snapshot.is_complete());
 }

@@ -19,9 +19,9 @@ pub struct SnapshotBuilder {
 }
 
 impl SnapshotBuilder {
-    pub fn new(root: Arc<SharedFolder>) -> Arc<SnapshotBuilder> {
+    pub fn new(root: SharedFolder) -> Arc<SnapshotBuilder> {
         Arc::new(SnapshotBuilder {
-            root,
+            root: Arc::new(root),
             paths: Mutex::new(Vec::new()),
             paths_count: atomic::AtomicI32::new(-1),
             error: Mutex::new(None),
