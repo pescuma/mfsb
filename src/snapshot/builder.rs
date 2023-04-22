@@ -8,10 +8,10 @@ use anyhow::Result;
 use relative_path::{RelativePath, RelativePathBuf};
 
 use crate::pack::location::PackLocation;
-use crate::workspace::SharedFolder;
+use crate::workspace::SharedItem;
 
 pub struct SnapshotBuilder {
-    root: Arc<SharedFolder>,
+    root: Arc<SharedItem>,
     paths: Mutex<Vec<Arc<PathBuilder>>>,
     paths_count: atomic::AtomicI32,
     error: Mutex<Option<Error>>,
@@ -19,7 +19,7 @@ pub struct SnapshotBuilder {
 }
 
 impl SnapshotBuilder {
-    pub fn new(root: SharedFolder) -> Arc<SnapshotBuilder> {
+    pub fn new(root: SharedItem) -> Arc<SnapshotBuilder> {
         Arc::new(SnapshotBuilder {
             root: Arc::new(root),
             paths: Mutex::new(Vec::new()),

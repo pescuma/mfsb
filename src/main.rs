@@ -12,7 +12,7 @@ fn main() -> Result<()> {
 
     let root = PathBuf::from("C:\\Users\\rdomenecci\\Books");
 
-    let folder = ws.get_folder(&root)?;
+    let folder = ws.get_shared_item(&root)?;
 
     let snapshot = SnapshotBuilder::new(folder);
     create_snapshot(snapshot);

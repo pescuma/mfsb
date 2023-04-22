@@ -5,7 +5,7 @@ use anyhow::{Error, Result};
 use directories::ProjectDirs;
 use uuid::Uuid;
 
-use crate::db::folders_db::FoldersDB;
+use crate::db::workspace_db::WorkspaceDB;
 
 #[derive(Clone)]
 pub struct Workspace {
@@ -23,12 +23,12 @@ impl Workspace {
         let data_dir = dirs.data_local_dir().to_owned();
         std::fs::create_dir_all(&data_dir)?;
 
-        let folders_db = FoldersDB::build(&data_dir.join("folders.db"))?;
+        let workspace_db = WorkspaceDB::build(&data_dir.join("workspace.db"))?;
 
         let data = WorkspaceData {
             config_dir,
             data_dir,
-            folders_db,
+            workspace_db,
         };
 
         Ok(Workspace {
@@ -36,10 +36,10 @@ impl Workspace {
         })
     }
 
-    pub fn get_folder(&mut self, path: &Path) -> Result<SharedFolder> {
+    pub fn get_shared_item(&mut self, path: &Path) -> Result<SharedItem> {
         let path = path.canonicalize()?;
 
-        self.lock_data().get_folder(path)
+        self.lock_data().get_shared_item(path)
     }
 
     fn lock_data(&mut self) -> MutexGuard<'_, WorkspaceData> {
@@ -50,22 +50,24 @@ impl Workspace {
 struct WorkspaceData {
     config_dir: PathBuf,
     data_dir: PathBuf,
-    folders_db: FoldersDB,
+    workspace_db: WorkspaceDB,
 }
 
 impl WorkspaceData {
-    fn get_folder(&mut self, path: PathBuf) -> Result<SharedFolder> {
-        self.folders_db.folder_query_or_insert_by_path(&path)
+    fn get_shared_item(&mut self, path: PathBuf) -> Result<SharedItem> {
+        self.workspace_db
+            .shared_items
+            .query_or_insert_by_path(&path)
     }
 }
 
 #[derive(Debug)]
-pub struct SharedFolder {
+pub struct SharedItem {
     pub id: Uuid,
     pub path: PathBuf,
 }
 
-impl SharedFolder {
+impl SharedItem {
     pub fn new(id: Uuid, path: PathBuf) -> Self {
         Self { id, path }
     }
