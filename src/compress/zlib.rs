@@ -22,4 +22,14 @@ impl CompressorImpl for ZlibCompressor {
 
         Ok(result)
     }
+
+    fn decompress(&self, data: &[u8], result_size: u32) -> Result<Vec<u8>> {
+        let mut decompressor = libdeflater::Decompressor::new();
+
+        let mut result = vec![0; result_size as usize];
+        let size = decompressor.zlib_decompress(data, &mut result)?;
+        result.resize(size, 0);
+
+        Ok(result)
+    }
 }

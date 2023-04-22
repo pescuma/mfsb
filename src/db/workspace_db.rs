@@ -1,9 +1,8 @@
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 
 use crate::db::open_db;
 use crate::workspace::SharedItem;
-use anyhow::{Error, Result};
+use anyhow::Result;
 use itertools::Itertools;
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;

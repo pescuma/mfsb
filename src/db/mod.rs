@@ -1,6 +1,6 @@
 pub mod workspace_db;
 
-use anyhow::{Error, Result};
+use anyhow::Result;
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::ops::DerefMut;

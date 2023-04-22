@@ -4,7 +4,6 @@ use std::sync::{atomic, Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::Error;
-use anyhow::Result;
 use relative_path::{RelativePath, RelativePathBuf};
 
 use crate::pack::location::PackLocation;

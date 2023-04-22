@@ -14,4 +14,10 @@ impl CompressorImpl for SnappyCompressor {
         let result = enc.compress_vec(data)?;
         Ok(result)
     }
+
+    fn decompress(&self, data: &[u8], _result_size: u32) -> Result<Vec<u8>> {
+        let mut enc = snap::raw::Decoder::new();
+        let result = enc.decompress_vec(data)?;
+        Ok(result)
+    }
 }

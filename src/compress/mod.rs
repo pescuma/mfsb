@@ -45,6 +45,7 @@ pub enum CompressionType {
 
 trait CompressorImpl: Send + Sync {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>>;
+    fn decompress(&self, data: &[u8], result_size: u32) -> Result<Vec<u8>>;
 }
 
 impl Compressor {
@@ -52,7 +53,7 @@ impl Compressor {
         return REGISTERED
             .0
             .keys()
-            .map(|k| *k)
+            .copied()
             .filter(|k| include_none || *k != "None")
             .collect();
     }
@@ -161,6 +162,10 @@ impl NoneCompressor {
 
 impl CompressorImpl for NoneCompressor {
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
+        Ok(Vec::from(data))
+    }
+
+    fn decompress(&self, data: &[u8], _result_size: u32) -> Result<Vec<u8>> {
         Ok(Vec::from(data))
     }
 }

@@ -3,7 +3,7 @@ use std::cmp::min;
 use ::secded::SecDed64;
 use ::secded::SecDedCodec;
 pub use anyhow::{Error, Result};
-use bitbuffer::{BigEndian, BitReadBuffer, BitReadStream, BitWriteStream, LittleEndian};
+use bitbuffer::{BitReadBuffer, BitReadStream, BitWriteStream, LittleEndian};
 use divrem::*;
 
 use super::*;
@@ -78,7 +78,7 @@ impl ECCImpl for Impl {
         result_writer.write_u64(self.encode(v), self.output_block_bits)?;
 
         loop {
-            let (mut v, s) = data_reader.read_u64(self.input_block_bits)?;
+            let (v, s) = data_reader.read_u64(self.input_block_bits)?;
             if s == 0 {
                 break;
             }
@@ -103,7 +103,7 @@ impl ECCImpl for Impl {
         result_writer.write_u64(v, self.input_block_bits - 32)?;
 
         loop {
-            let (mut v, s) = data_reader.read_u64(self.output_block_bits)?;
+            let (v, s) = data_reader.read_u64(self.output_block_bits)?;
             if s == 0 {
                 break;
             }
