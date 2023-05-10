@@ -30,7 +30,7 @@ keyring = "2.0.2"
 lazy_static = "1.4.0"
 libdeflater = "0.13.0"
 lz4_flex = { version = "0.10.0", default-features = false, features = ["checked-decode"] }
-memmap2 = "0.5.10"
+memmap2 = "0.6.1"
 quanta = "0.11.0"
 rand = "0.8.5"
 relative-path = "1.8.0"
