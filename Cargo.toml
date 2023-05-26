@@ -16,7 +16,7 @@ bzip2 = "0.4.4"
 cdc = "0.1.1"
 cdchunking = "1.0.1"
 chacha20poly1305 = { version = "0.10.1", features = ["std"] }
-console = "0.15.5"
+console = "0.15.7"
 digest = "0.10.7"
 fastcdc = "3.0.3"
 divrem = "1.0.0"
