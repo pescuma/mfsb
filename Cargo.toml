@@ -37,7 +37,7 @@ relative-path = "1.8.0"
 ring = { version = "0.16.20", features = ["std"] }
 secded = { version = "1.1.0", features = ["no-panics"] }
 sha2 = "0.10.6"
-sha3 = "0.10.7"
+sha3 = "0.10.8"
 snap = "1.1.0"
 tiger = "0.2.1"
 whirlpool = "0.10.4"
