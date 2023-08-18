@@ -33,7 +33,7 @@ lz4_flex = { version = "0.10.0", default-features = false, features = ["checked-
 memmap2 = "0.7.1"
 quanta = "0.11.1"
 rand = "0.8.5"
-relative-path = "1.8.0"
+relative-path = "1.9.0"
 ring = { version = "0.16.20", features = ["std"] }
 secded = { version = "1.1.0", features = ["no-panics"] }
 sha2 = "0.10.7"
