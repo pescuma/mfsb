@@ -11,7 +11,7 @@ jobs:
         rust: [stable]
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install ${{ matrix.rust }} toolchain
         uses: dtolnay/rust-toolchain@master
         with:
