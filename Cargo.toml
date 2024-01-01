@@ -31,7 +31,7 @@ lazy_static = "1.4.0"
 libdeflater = "1.19.0"
 lz4_flex = { version = "0.10.0", default-features = false, features = ["checked-decode"] }
 memmap2 = "0.9.3"
-quanta = "0.12.1"
+quanta = "0.12.2"
 rand = "0.8.5"
 relative-path = "1.9.2"
 ring = { version = "0.17.7", features = ["std"] }
