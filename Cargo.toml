@@ -25,7 +25,7 @@ generic-array = "0.14.7"
 hash-roll = "0.3.0"
 hdrhistogram = "7.5.4"
 human-repr = "1.1.0"
-indicatif = { version = "0.17.7", features = ["improved_unicode"] }
+indicatif = { version = "0.17.8", features = ["improved_unicode"] }
 keyring = "2.3.2"
 lazy_static = "1.4.0"
 libdeflater = "1.19.0"
