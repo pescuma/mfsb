@@ -28,7 +28,7 @@ human-repr = "1.1.0"
 indicatif = { version = "0.17.8", features = ["improved_unicode"] }
 keyring = "2.3.2"
 lazy_static = "1.4.0"
-libdeflater = "1.19.2"
+libdeflater = "1.19.3"
 lz4_flex = { version = "0.10.0", default-features = false, features = ["checked-decode"] }
 memmap2 = "0.9.4"
 quanta = "0.12.2"
