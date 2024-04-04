@@ -868,6 +868,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "heck"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
+
+[[package]]
 name = "hermit-abi"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1609,9 +1615,9 @@ dependencies = [
 
 [[package]]
 name = "refinery"
-version = "0.8.13"
+version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "425d0fb45561a45e274d318bfbd1bdfbb7a88045860c7b51a2b812ded1a5efc7"
+checksum = "0904191f0566c3d3e0091d5cc8dec22e663d77def2d247b16e7a438b188bf75d"
 dependencies = [
  "refinery-core",
  "refinery-macros",
@@ -1619,9 +1625,9 @@ dependencies = [
 
 [[package]]
 name = "refinery-core"
-version = "0.8.13"
+version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d0f5d1af6a2e8d5972ca187b2acf7ecb8d6a1a6ece52bceeae8f57880eaf62f"
+checksum = "9bf253999e1899ae476c910b994959e341d84c4389ba9533d3dacbe06df04825"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -1639,10 +1645,11 @@ dependencies = [
 
 [[package]]
 name = "refinery-macros"
-version = "0.8.13"
+version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ba59636ac45d953f2225dc4ca3a55cfda1b015d0e6ff51ea16329918b436d51"
+checksum = "bd81f69687fe8a1fa10995108b3ffc7cdbd63e682a4f8fbfd1020130780d7e17"
 dependencies = [
+ "heck",
  "proc-macro2",
  "quote",
  "refinery-core",
