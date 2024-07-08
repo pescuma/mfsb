@@ -42,7 +42,7 @@ snap = "1.1.1"
 tiger = "0.2.1"
 whirlpool = "0.10.4"
 xz2 = "0.1.7"
-zstd = "0.13.1"
+zstd = "0.13.2"
 directories = "5.0.1"
 rusqlite = { version = "0.28.0", features = ["bundled", "uuid"] }
 r2d2 = "0.8.10"
