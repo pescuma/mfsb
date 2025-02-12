@@ -12,7 +12,7 @@ bitbuffer = "0.10.9"
 blake2 = "0.10.6"
 blake3 = "1.5.3"
 brotlic = "0.8.2"
-bzip2 = "0.4.4"
+bzip2 = "0.5.1"
 cdc = "0.1.1"
 cdchunking = "1.0.1"
 chacha20poly1305 = { version = "0.10.1", features = ["std"] }
